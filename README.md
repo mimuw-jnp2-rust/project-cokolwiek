@@ -1,4 +1,27 @@
-# Edytor tekstu z mozliwoscia wprowadzania glosowego i wsparciem dla pracy zdalnej 🤠
+
+# Pierwsza iteracja
+
+## edytor tekstowy w ruście
+
+Pierwsza część projektu zawiera edytor tekstowy obsługujący:
+- formatowanie w stylu MarkDown'a, m.in: \*pogrubienie\*, \/kursywa/\, \`kod\`, \$indeks dolny\$, \^indeks górny\^, \~przekreślenie\~, \_podkreślenie\_, \<url\>
+- wyświetlanie sformatowanego tekstu na bieżąco w równoległym oknie (podgląd można wyłączyć)
+- skróty klawiszowe: ctrl + B: *strong*  ctrl + D: `code`  ctrl + I: /italics/  ctrl + L: $lowered$  ctrl + R: ^raised^  ctrl + S: ~strikethrough~  ctrl + U: _underline_  ctrl + Q: quit
+- obsługę plików: otwieranie pliku, zapis pliku, zapis pliku pod nową nazwą, zapis pliku przy wychodzeniu z edytora
+
+## uruchamianie
+
+1. `sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev libxkbcommon-dev libssl-dev` (na linuxie)
+
+2. `rustup update`
+
+3. `cargo run`
+
+---
+
+# plan projektu
+
+## Edytor tekstu z mozliwoscia wprowadzania glosowego i wsparciem dla pracy zdalnej 🤠
 that was a handful
 チーム
 
