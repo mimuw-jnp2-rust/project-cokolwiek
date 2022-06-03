@@ -1,0 +1,24 @@
+[package]
+name = "rust-text-editor"
+version = "0.1.0"
+default-run = "rust-text-editor_bin"
+authors = ["Tomek", "Maja", "Grzegorz", "Agnieszka"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "rust-text-editor_bin"
+path = "src/main.rs"
+
+[dependencies]
+eframe = "0.17.0" # Gives us egui, epi and web+native backends
+
+# dialog windows for file selection are super nice
+rfd = "0.8.2"
+
+[features]
+default = []
+
+[profile.release]
+opt-level = 2 # fast and small
