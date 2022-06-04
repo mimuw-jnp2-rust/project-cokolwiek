@@ -1,13 +1,36 @@
 
-# Pierwsza iteracja
+### set up pod stt
+shit to text
 
-## edytor tekstowy w ruście
+#### modele
+jeśli chcemy na razie używać jedynie engelsk modelu to droga prosta:
+```sh
+cd en-model
+./setup.sh
+```
+to zajmie chwilkę poniewaz to sążny model jest
 
-Pierwsza część projektu zawiera edytor tekstowy obsługujący:
-- formatowanie w stylu MarkDown'a, m.in: \*pogrubienie\*, \/kursywa/\, \`kod\`, \$indeks dolny\$, \^indeks górny\^, \~przekreślenie\~, \_podkreślenie\_, \<url\>
-- wyświetlanie sformatowanego tekstu na bieżąco w równoległym oknie (podgląd można wyłączyć)
-- skróty klawiszowe: ctrl + B: *strong*  ctrl + D: `code`  ctrl + I: /italics/  ctrl + L: $lowered$  ctrl + R: ^raised^  ctrl + S: ~strikethrough~  ctrl + U: _underline_  ctrl + Q: quit
-- obsługę plików: otwieranie pliku, zapis pliku, zapis pliku pod nową nazwą, zapis pliku przy wychodzeniu z edytora
+dla polskiego analogicznie w `pl-model`, ale to na rzie wgl unimplemented więc no
+
+#### lib-stt
+ważniejsze jest natomiast zainstalowanie samej biblioteki
+```sh
+cd lib-stt
+./setup.sh
+```
+
+**to są rzeczy jednorazowe**
+
+#### kompilacja
+po otwarciu naszrgo katalogu trzeba powiedziec rustowi gdzie ma to stt
+```
+. setup_paths.sh
+```
+nie można po prostu odpalić skryptu, trzeba go tak skropkować
+
+To trzeba robić raz na jedną sesję terminala ponieważ to ustawia zmienne środowiskowe.
+
+bez tego cargo run ani cargo build nie zadzialaja
 
 ## uruchamianie
 
@@ -19,7 +42,7 @@ Pierwsza część projektu zawiera edytor tekstowy obsługujący:
 
 ---
 
-# plan projektu
+## todo ważne dla io
 
 ## Edytor tekstu z mozliwoscia wprowadzania glosowego i wsparciem dla pracy zdalnej 🤠
 that was a handful
