@@ -7,7 +7,7 @@ use eframe::egui::vec2;
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
-    let editor = rust_text_editor::TextEditor::default();
+    let editor = rust_shit_editor::TextEditor::default();
     let native_options = eframe::NativeOptions {
         initial_window_size: Some(vec2(700., 500.)),
         ..eframe::NativeOptions::default()
