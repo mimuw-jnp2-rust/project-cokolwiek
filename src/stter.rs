@@ -44,6 +44,7 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
             let maybe_audio = recorder_msg.unwrap();
             match maybe_audio {
                 Some(audio) => {
+                    eprintln!("[stter] Got Some(audio)");
                     // We got send some new audio to process.
                     stream.feed_audio(&audio[..]);
                     let intermediate = stream.intermediate_decode();
@@ -54,12 +55,15 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
                     }
                 }
                 None => {
+                    eprintln!("[stter] Got told to fuck off, finishing the stream then");
                     // We got a "end of recording" message.
                     let final_s = stream.finish_stream();
                     if final_s.is_ok() {
                         gui_sender
                             .send(DecodedSpeech::Final(final_s.unwrap()))
                             .expect("Sending of decoded speech failed miserably");
+                    } else {
+                        eprintln!("Failed to finish the stream: {}", final_s.unwrap_err());
                     }
                     break;
                 }

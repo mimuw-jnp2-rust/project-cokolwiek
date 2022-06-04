@@ -18,6 +18,7 @@ pub struct TextEditor {
     stter_receiver: Receiver<DecodedSpeech>,
     recorder_sender: Sender<GuiOrders>,
     is_recording: bool,
+    is_stopping: bool,
     backup_code: String,
 }
 
@@ -44,13 +45,20 @@ impl epi::App for TextEditor {
                 eprintln!("Quitting via the 'Quit' button");
                 frame.quit();
             }
+            let dictate_bttn = if !self.is_recording && !self.is_stopping {
+                "Dictate"
+            } else {
+                "Stop"
+            };
 
-            if ui.button(format!("{:^17}", "Dictate")).clicked() {
+            if ui.button(format!("{:^17}", dictate_bttn)).clicked() {
                 if !self.is_recording {
                     self.start_recording();
-                } else {
-                    // this will end until we receive a Final decoded speech bit.
-                    self.end_recording();
+                } else if !self.is_stopping {
+                    eprintln!("The user wants to quit, let him...");
+                    self.recorder_sender.send(GuiOrders::Stop)
+                        .expect("Failed to send recording-stopping message!");
+                    self.is_stopping = true;
                 }
             }
 
@@ -91,6 +99,8 @@ impl epi::App for TextEditor {
             if self.is_exiting {
                 self.should_exit = self.quit();
                 if self.should_exit {
+                    self.recorder_sender.send(GuiOrders::Exit)
+                        .expect("Failed to send Exit to recorder!");
                     frame.quit();
                 } else {
                     self.is_exiting = false;
@@ -102,7 +112,9 @@ impl epi::App for TextEditor {
             self.ui(ui);
         });
 
-        if self.is_recording {
+        if self.is_stopping {
+            self.end_recording();
+        } else if self.is_recording {
             self.manage_recording();
         }
     }
@@ -122,6 +134,7 @@ impl TextEditor {
             stter_receiver,
             recorder_sender,
             is_recording: false,
+            is_stopping: false,
             backup_code: String::new(),
         }
     }
@@ -274,6 +287,7 @@ impl TextEditor {
             DecodedSpeech::Intermediate(s) => {
                 self.code = self.backup_code.clone();
                 self.code.push_str(&s);
+                self.code.push_str(" ... [decoding] ...");
             }
             DecodedSpeech::Final(_) => panic!(
                 "Editor logic error! We should only receive intermediate decoded text fragments now!"
@@ -282,7 +296,7 @@ impl TextEditor {
     }
 
     fn end_recording(&mut self) {
-        self.recorder_sender.send(GuiOrders::Stop).expect("Failed to send recording-stopping message!");
+        eprintln!("Trying to stop recording!");
         let speech = self.stter_receiver.try_recv();
         if speech.is_err() {
             let err = speech.unwrap_err();
@@ -297,13 +311,16 @@ impl TextEditor {
             DecodedSpeech::Intermediate(s) => {
                 self.code = self.backup_code.clone();
                 self.code.push_str(&s);
+                self.code.push_str(" ... [decoding] ...");
             }
             DecodedSpeech::Final(s) => {
+                eprintln!("Received final bit of rcording!");
                 self.code = self.backup_code.clone();
                 self.backup_code = String::new();
                 self.code.push_str(&s);
                 // only now the recording is done and processed
                 self.is_recording = false;
+                self.is_stopping = false;
             }
         };
     }

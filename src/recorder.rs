@@ -15,6 +15,9 @@ pub enum GuiOrders {
     Exit,
 }
 
+// todo mutex for a bool to check whether we should send or not as the
+// pause method mya not be reliable?
+
 pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMessage>) {
     let host = cpal::default_host();
     let dev = host.default_input_device().expect("No input device!");
@@ -22,8 +25,15 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
         .supported_input_configs()
         .expect("Failed to find any config")
         .find(|c| c.sample_format() == cpal::SampleFormat::I16)
-        .expect("Failed to find required input device config ie. i16 (??)")
-        .with_max_sample_rate();
+        .expect("Failed to find required input device config ie. i16 (??)");
+
+    eprintln!("smapele rate is from {} to {}",
+              config.min_sample_rate().0, config.max_sample_rate().0);
+
+    // let sr = config.max_sample_rate();
+    // todo select a good bloody number here
+    let sr = cpal::SampleRate(40);
+    let config = config.with_sample_rate(sr);
 
     let err_fn = move |err| {
         eprintln!("Error on stream: {}", err);
@@ -48,6 +58,7 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
     let stream = dev
         .build_input_stream(&config.into(), record_callback, err_fn)
         .expect("Failed to construct an input stream!");
+    stream.pause().expect("faield to pause upon creation?");
 
     loop {
         match gui_receiver
@@ -56,12 +67,15 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
         {
             GuiOrders::Record => stream.play().expect("Failed to start recording!"),
             GuiOrders::Stop => {
+                eprintln!("[recorder] Sending Some(None)) to the stter!");
                 stream.pause().expect("Failed to stop recording!");
+                // todo: wait here? until some time passes? so all audio is cleared?
                 stt_sender
                     .lock()
                     .expect("Mutex poisoned!")
                     .send(Some(None))
                     .expect("Failed to send None to the stter!");
+                eprintln!("[recorder] Sent Some(None)!");
             }
             GuiOrders::Exit => {
                 stt_sender
