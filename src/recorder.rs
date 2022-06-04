@@ -5,13 +5,17 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 
+pub type AudioMessage = Option<Option<Vec<i16>>>;
+
+// todo: this should be moved to the gui module for consistency (consistency ie
+// each module defines what it sends)
 pub enum GuiOrders {
     Record,
     Stop,
     Exit,
 }
 
-fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<Option<Vec<i16>>>) {
+pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMessage>) {
     let host = cpal::default_host();
     let dev = host.default_input_device().expect("No input device!");
     let config = dev
@@ -34,7 +38,7 @@ fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<Option<Vec<i
         stt_sender
             .lock()
             .expect("Poisoned mutex!")
-            .send(Some(data))
+            .send(Some(Some(data)))
             .expect("Failed to send data to stter!");
         // stter_sender.send(Some()
     };
@@ -56,11 +60,10 @@ fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<Option<Vec<i
                 stt_sender
                     .lock()
                     .expect("Mutex poisoned!")
-                    .send(None)
+                    .send(Some(None))
                     .expect("Failed to send None to the stter!");
             }
             GuiOrders::Exit => {
-                // todo: we should send something more complex here
                 stt_sender
                     .lock()
                     .expect("Mutex poisoned!")

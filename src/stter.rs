@@ -5,6 +5,9 @@ use std::path::Path;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
 
+use crate::recorder::AudioMessage;
+
+#[derive(Debug)]
 pub enum DecodedSpeech {
     Intermediate(String),
     Final(String),
@@ -12,7 +15,7 @@ pub enum DecodedSpeech {
 
 const MODEL_DIR: &str = "en-model";
 
-fn stter(recorder_receiver: Receiver<Option<Vec<i16>>>, gui_sender: Sender<DecodedSpeech>) {
+pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<DecodedSpeech>) {
     let (model_name, scorer_name) = get_model_scorer_names();
     let mut m = Model::new(model_name.to_str().expect("invalid utf-8 found in path")).unwrap();
     // Enable external scorer if found in the model folder.
@@ -23,19 +26,25 @@ fn stter(recorder_receiver: Receiver<Option<Vec<i16>>>, gui_sender: Sender<Decod
     }
 
     let model = Arc::new(m);
-    // Todo: perhaps this thread should exit sometimes?
-    // And it shouldn't be Option that gets received but rather Option or exit?
-    // if exit then au revoi the thread innit.
+
     loop {
         let mut stream =
             Stream::from_model(Arc::clone(&model)).expect("Model creation failed miserably");
 
         loop {
-            let maybe_audio = recorder_receiver
+            let recorder_msg = recorder_receiver
                 .recv()
                 .expect("Audio receival failed miserably");
+
+            // We are told to shutdown so we do so.
+            if recorder_msg.is_none() {
+                return;
+            }
+
+            let maybe_audio = recorder_msg.unwrap();
             match maybe_audio {
                 Some(audio) => {
+                    // We got send some new audio to process.
                     stream.feed_audio(&audio[..]);
                     let intermediate = stream.intermediate_decode();
                     if intermediate.is_ok() {
@@ -45,6 +54,7 @@ fn stter(recorder_receiver: Receiver<Option<Vec<i16>>>, gui_sender: Sender<Decod
                     }
                 }
                 None => {
+                    // We got a "end of recording" message.
                     let final_s = stream.finish_stream();
                     if final_s.is_ok() {
                         gui_sender

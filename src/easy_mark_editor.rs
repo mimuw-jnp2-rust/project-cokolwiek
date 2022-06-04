@@ -4,6 +4,10 @@ use rfd::{FileDialog, MessageDialog};
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
+use std::sync::mpsc::{Receiver, Sender};
+
+use crate::recorder::GuiOrders;
+use crate::stter::DecodedSpeech;
 
 pub struct TextEditor {
     code: String,
@@ -11,23 +15,15 @@ pub struct TextEditor {
     file_path: Option<PathBuf>,
     should_exit: bool,
     is_exiting: bool,
+    stter_receiver: Receiver<DecodedSpeech>,
+    recorder_sender: Sender<GuiOrders>,
+    is_recording: bool,
+    backup_code: String,
 }
 
 impl PartialEq for TextEditor {
     fn eq(&self, other: &Self) -> bool {
         (&self.code, self.show_rendered) == (&other.code, other.show_rendered)
-    }
-}
-
-impl Default for TextEditor {
-    fn default() -> Self {
-        Self {
-            code: String::new(),
-            show_rendered: true,
-            file_path: None,
-            should_exit: false,
-            is_exiting: false,
-        }
     }
 }
 
@@ -47,6 +43,15 @@ impl epi::App for TextEditor {
             if ui.button(format!("{:^17}", "Quit")).clicked() {
                 eprintln!("Quitting via the 'Quit' button");
                 frame.quit();
+            }
+
+            if ui.button(format!("{:^17}", "Dictate")).clicked() {
+                if !self.is_recording {
+                    self.start_recording();
+                } else {
+                    // this will end until we receive a Final decoded speech bit.
+                    self.end_recording();
+                }
             }
 
             if ui.button(format!("{:^13}", "Open file")).clicked() && matches!(self.open(), Err(_))
@@ -96,10 +101,31 @@ impl epi::App for TextEditor {
         eframe::egui::CentralPanel::default().show(ctx, |ui| {
             self.ui(ui);
         });
+
+        if self.is_recording {
+            self.manage_recording();
+        }
     }
 }
 
 impl TextEditor {
+    pub fn new(
+        stter_receiver: Receiver<DecodedSpeech>,
+        recorder_sender: Sender<GuiOrders>,
+    ) -> Self {
+        Self {
+            code: String::new(),
+            show_rendered: true,
+            file_path: None,
+            should_exit: false,
+            is_exiting: false,
+            stter_receiver,
+            recorder_sender,
+            is_recording: false,
+            backup_code: String::new(),
+        }
+    }
+
     fn open(&mut self) -> Result<(), std::io::Error> {
         let path = FileDialog::new()
             .set_directory("~/")
@@ -175,8 +201,8 @@ impl TextEditor {
         egui::Grid::new("controls").show(ui, |ui| {
             ui.checkbox(&mut self.show_rendered, "Show rendered");
             ui.end_row();
-            egui::reset_button(ui, self);
-            ui.end_row();
+            // egui::reset_button(ui, self);
+            // ui.end_row();
         });
 
         ui.separator();
@@ -209,7 +235,8 @@ impl TextEditor {
                     .hint_text("Type here...")
                     .desired_width(f32::INFINITY)
                     .font(egui::FontId::monospace(15.)) // for cursor height
-                    .desired_rows(100),
+                    .desired_rows(100)
+                    .interactive(!self.is_recording), // not writable while recording
             )
         };
 
@@ -222,6 +249,63 @@ impl TextEditor {
                 }
             }
         }
+    }
+
+    fn start_recording(&mut self) {
+        self.is_recording = true;
+        self.recorder_sender
+            .send(GuiOrders::Record)
+            .expect("Failed to send a recording-starting message!");
+        self.backup_code = self.code.clone();
+    }
+
+    fn manage_recording(&mut self) {
+        let speech = self.stter_receiver.try_recv();
+        if speech.is_err() {
+            let err = speech.unwrap_err();
+            match err {
+                std::sync::mpsc::TryRecvError::Empty => return,
+                std::sync::mpsc::TryRecvError::Disconnected => panic!("Failed to receive!"),
+            };
+        }
+        let speech = speech.unwrap();
+
+        match speech {
+            DecodedSpeech::Intermediate(s) => {
+                self.code = self.backup_code.clone();
+                self.code.push_str(&s);
+            }
+            DecodedSpeech::Final(_) => panic!(
+                "Editor logic error! We should only receive intermediate decoded text fragments now!"
+            ),
+        };
+    }
+
+    fn end_recording(&mut self) {
+        self.recorder_sender.send(GuiOrders::Stop).expect("Failed to send recording-stopping message!");
+        let speech = self.stter_receiver.try_recv();
+        if speech.is_err() {
+            let err = speech.unwrap_err();
+            match err {
+                std::sync::mpsc::TryRecvError::Empty => return,
+                std::sync::mpsc::TryRecvError::Disconnected => panic!("Failed to receive!"),
+            };
+        }
+        let speech = speech.unwrap();
+
+        match speech {
+            DecodedSpeech::Intermediate(s) => {
+                self.code = self.backup_code.clone();
+                self.code.push_str(&s);
+            }
+            DecodedSpeech::Final(s) => {
+                self.code = self.backup_code.clone();
+                self.backup_code = String::new();
+                self.code.push_str(&s);
+                // only now the recording is done and processed
+                self.is_recording = false;
+            }
+        };
     }
 }
 
