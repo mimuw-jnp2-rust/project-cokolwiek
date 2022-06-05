@@ -1,16 +1,17 @@
-// The thread responsible for recording user audio and sending it through to stt.
+// The thread responsible for recording user audio and sending it to stt.
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
-// todo: this should be redesigned actually, custom enum and a 3 way branched
-// match in stter.rs
-pub type AudioMessage = Option<Option<Vec<i16>>>;
+pub enum AudioMessage {
+    Audio(Vec<i16>),
+    EndOf,
+    Exit,
+}
 
-// todo: this should be moved to the gui module for consistency (consistency ie
-// each module defines what it sends)
 pub enum GuiOrders {
     Record,
     Stop,
@@ -25,40 +26,48 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
         .supported_input_configs()
         .expect("Failed to find any config")
         .find(|c| c.sample_format() == cpal::SampleFormat::I16)
-        .expect("Failed to find required input device config ie. i16 (??)");
+        .expect("Failed to find required input device config ie i16.");
 
-    eprintln!("[recorder] smapele rate is from {} to {}",
-              config.min_sample_rate().0, config.max_sample_rate().0);
+    eprintln!(
+        "[recorder] Avalaible sample rate is between {} and {} Hz.",
+        config.min_sample_rate().0,
+        config.max_sample_rate().0
+    );
 
-    eprintln!("[recorder] there are {} channels", config.channels());
+    eprintln!("[recorder] there are {} channel(s)", config.channels());
     // todo: make this work for stereo? do i really need to though?
     // stereo_to_mono function avalaible here:
     // https://github.com/tazz4843/coqui-stt/blob/master/examples/threads.rs
     // at the bottom
     assert!(config.channels() == 1);
+    assert!(config.min_sample_rate().0 <= 16000 && 16000 <= config.max_sample_rate().0);
 
     // todo: perhaps this should be rather set according to what the model says?
     // though obv the coqui models all run on 16 kHz so maybe hardcode it
-    // or make a const u32 for that?
+    // => or make a const u32 for that? (good idea)
     let sr = cpal::SampleRate(16000);
-    eprintln!("[recorder] Creating a stream with sample rate = {} Hz", sr.0);
+    eprintln!(
+        "[recorder] Creating a stream with sample rate = {} Hz.",
+        sr.0
+    );
     let config = config.with_sample_rate(sr);
 
-    let err_fn = move |err| {
-        eprintln!("Error on stream: {}", err);
-    };
+    let err_fn = move |err| eprintln!("Error on stream: {}", err);
 
+    // shared data for the asynchronous callback fn
     let should_send = Arc::new(Mutex::new(false));
     let should_send2 = should_send.clone();
+
     let stt_sender = Arc::new(Mutex::new(stter_sender));
     let stt_sender2 = stt_sender.clone();
+
     let record_callback = move |data: &[i16], _: &_| {
-        if *should_send.lock().expect("Mutex error") {
+        if *should_send.lock().expect("Poisoned should_send mutex!") {
             let data = data.to_vec();
             stt_sender
                 .lock()
-                .expect("Poisoned mutex!")
-                .send(Some(Some(data)))
+                .expect("Poisoned stt_sender mutex!")
+                .send(AudioMessage::Audio(data))
                 .expect("Failed to send data to stter!");
         }
     };
@@ -69,6 +78,8 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
     let stream = dev
         .build_input_stream(&config.into(), record_callback, err_fn)
         .expect("Failed to construct an input stream!");
+
+    // todo: perhaps pause error shouldn't be fatal, check on other machines
     stream.pause().expect("faield to pause upon creation?");
 
     loop {
@@ -77,31 +88,31 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
             .expect("Failed to receive messages from gui!")
         {
             GuiOrders::Record => {
+                // sleep for a short while to make sure it starts smoothly
+                std::thread::sleep(Duration::from_millis(50));
                 {
-                    *should_send.lock().expect("Mutex failure") = true;
+                    *should_send.lock().expect("Poisoned should_send mutex!") = true;
                 }
                 stream.play().expect("Failed to start recording!");
-            },
+            }
             GuiOrders::Stop => {
-                eprintln!("[recorder] Sending Some(None)) to the stter!");
                 stream.pause().expect("Failed to stop recording!");
                 {
-                    *should_send.lock().expect("Mutex failure") = false;
+                    *should_send.lock().expect("Poisoned should_send mutex!") = false;
                 }
-                // todo: wait here? until some time passes? so all audio is cleared?
                 stt_sender
                     .lock()
-                    .expect("Mutex poisoned!")
-                    .send(Some(None))
+                    .expect("Poisoned stt_sender mutex!")
+                    .send(AudioMessage::EndOf)
                     .expect("Failed to send None to the stter!");
-                eprintln!("[recorder] Sent Some(None)!");
+                eprintln!("[recorder] Sent EndOf to the stter.");
             }
             GuiOrders::Exit => {
                 stt_sender
                     .lock()
-                    .expect("Mutex poisoned!")
-                    .send(None)
-                    .expect("Failed to send None to the stter!");
+                    .expect("Poisoned stt_sender mutex!")
+                    .send(AudioMessage::Exit)
+                    .expect("Failed to send Exit to the stter!");
                 return;
             }
         }

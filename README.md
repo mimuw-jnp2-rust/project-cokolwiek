@@ -1,38 +1,32 @@
 
-### set up pod stt
-shit to text
+### changes
+zrobione stt, a poza tym bumped up egui o jedną wersję w górę, co
+początkowo meeega zepsuło, ale dzięki temu super kręcące się kółeczko
+jest (!)
+
+### set up pod stt aka tutorial tzw
+_shit to text_
 
 #### modele
-jeśli chcemy na razie używać jedynie engelsk modelu to droga prosta:
+jeśli chcemy na razie używać jedynie _engelsk_ modelu to droga prosta:
+
 ```sh
 cd en-model
 ./setup.sh
 ```
-to zajmie chwilkę poniewaz to sążny model jest
+to zajmie chwilkę poniewaz to sążny model jest (zwłaszcza tzw scorer)
 
-dla polskiego analogicznie w `pl-model`, ale to na rzie wgl unimplemented więc no
+dla polskiego analogicznie w `pl-model` jeśli wola
 
 #### libstt
-ważniejsze jest natomiast zainstalowanie samej biblioteczki
+ważne jest również zainstalowanie samej biblioteczki
+
 ```sh
 cd libstt
 ./setup.sh
 ```
 
-**to są rzeczy jednorazowe**
-
-#### kompilacja
-po otwarciu naszrgo katalogu trzeba powiedziec rustowi gdzie ma to stt
-```
-. setup_paths.sh
-```
-nie można po prostu odpalić skryptu, trzeba go tak skropkować
-
-To trzeba robić raz na jedną sesję terminala ponieważ to ustawia zmienne środowiskowe.
-
-bez tego cargo run ani cargo build nie zadzialaja
-
-## uruchamianie
+### kompylacja
 
 1. `sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev libxkbcommon-dev libssl-dev` (na linuxie)
 
@@ -41,7 +35,8 @@ bez tego cargo run ani cargo build nie zadzialaja
 ```
 cargo run -- pl-model
 ```
-po uprzednim ściągnięciu `pl-model`
+po uprzednim ściągnięciu `pl-model` (ogólnie pierwszy z `argv` podany to `model-dir`,
+default to jest `en-model`, można sobie przeróżne instalować ze [strony z modelami](https://coqui.ai/models))
 
 
 ### dependencies
@@ -56,38 +51,43 @@ mi czasem rust-analyzer tyllko cos buguje, ale malo
 
 ## todo ważne dla io
 
-## Edytor tekstu z mozliwoscia wprowadzania glosowego i wsparciem dla pracy zdalnej 🤠
-that was a handful
-チーム
+- [ ] niech pyta o saving jedynie when edited, a nie zawsze, pytal o to pan g ostatnio :/
+- ^ **ważne** actually, trochę nie wiem jak to zrobić, trzymać backup code między update;ami
+  na wzór tego jak go trzymam podczas odbioru komunkatów od stt? compare with saved file?
+  jakoś gdzieś jest miejsce koło `TextEdit` gdzie to widać? aucune idee
+- [ ] saving podczas recordingu nie powinien być UB, tylko niedozwolony/coś sensible
+- ^ duża szansa, że ktoś zechce to sprawdzic
+- [ ] ktoś inny błagam niech to zreviewuje
+- [X] quiting jak [tutaj](https://github.com/emilk/egui/blob/master/examples/confirm_exit/src/main.rs) bo system sie trikuje
+- [X] dodać do structu aplikacji jakiś path currently edytowanego pliku
+- [X] przy exicie powinien pytać o zapisanie
+- [X] metoda dla structu na quit ktora jest callowana na ctrl-q i przycisk
+- [X] ^ ona pyta o save/choose file i to zalatwaimy z `rfd`
+- [X] ^ to mozna zalatwic `rfd::MessageDialog` typu `YesNo`, jakies "rly quit??"
+- [X] przycisk open
+- [X] przycisk save
+- [ ] chyba tyle
 
-## Autorzy
-- Agnieszka Pałka (gr 4, @kaorixxx)
-- Grzegrz Cichosz (gr. 9, @ggegoge)
-- Maja Wiśniewska (gr 4, @miwisniewsk)
-
-oraz io w 4 osoby to jeszcze jeden człowiek spoza grup rustowych
-
-## Opis
-Od zawsze chcieliśmy napisać projekt na io.
-
-W tymże projekcie chodzi o to, że napiszemy w ruście edytor tekstu z mozliwoscia wprowadzania glosowego i wsparciem dla pracy zdalnej 🤠, a przynajmniej w jakiejś części. Edytor będzie służył do edycji tekstu plain, ale będzie może wyświetlał obok sformatowany à la markdown tenże tekst.
-
-Z grubsza będziemy wzorować się na (TBD, tutaj jestesmy otwarci na sugestie jak zacząć coś takiego w ogóle mając 0 doświadczenia z gui jakimkolwiek).
-
-## Funkcjonalność
-- pisanie tekstu
-- wmawianie tekstu
-- widok na sformatowany markdownem tekst czy cos
-- jakies basic rzeczy typu skroty klawiszowe, zapisanie pliku
-- ta praca zdalna to taka jak sie uda
-
-## Propozycja podziału na części
-edytor jako cz 1 i pozniej dodatki speech to tekstowe jako part 2
-
-ale to dość treściwie może się rozwinąć i pytanie czy ta tzw pierwsza część nam nie wypadnie wcześniej w związku ze wspomnianym już io
-
-## Biblioteki
-- egui do gui? seems legit i ma [taki cool example](https://www.egui.rs/#easymark)
-- do stt [coqui-stt](https://github.com/tazz4843/coqui-stt) wydaje się dość sensowne (mowa o j. angielskim)
-- jeśli jakieś są sensowne uwagi do dodania do tego, to z chęcią się dowiemy, ale jesteśmy troszeczkę dziećmi we mgle
-- komunikacja jakoś do ogarnięcia
+### todo ważne, ale dla mądrych ludzi a nie dla io (więc np na przeklęte jnp)
+- [ ] **wszystkie todo z kodu**
+- [ ] lepiej handlować errory np `matches!(coś, Err(_))` (którę sam
+      zasugerowałem,..) to syf i lepiej robić `coś.is_err()/is_ok()`. 
+- [ ] also nwm czy nie mam przesadnie nasrane expectami, może lepiej
+      robić unwrapy/znaki zapytania?
+- [ ] clean code
+- [ ] wywalić shit komentarze i printy, a dodać good komentarze
+- [ ] _aesthetics_
+  - [ ] kolorowe przyciski bardziej? są na to metody w egui chyba, np record green/red??
+  - [ ] itp?
+  - [ ] równe justified te przyciski, to już widzę że jest zrobione dla wiekszosci
+  - [ ] pisać gdzieś currently edited file jeśli znamy nazwę, powinno to być łatwe
+- [X] dać własne nazwy structom miast tych skradzionych
+- [ ] dać własne nazwy plikom...
+- [X] wywalić te jakieś pozostałości z template'u, które polegały na tych webowych 
+sprawach
+- [X] pliki niektore wgl nieuzywane sa chyba serio 
+- [ ] czemu to sie tak dlugo kompiluje xd
+- [ ] clean code 
+- [X] zrozumieć co co robi
+- [ ] [log do pisania zamiast eprintln?](https://docs.rs/log/0.4.17/log/index.html)
+jakoś ze zmienną env `RUST_LOG=debug`??

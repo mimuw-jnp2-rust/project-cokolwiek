@@ -43,20 +43,14 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
         let mut counter: u32 = 0;
 
         loop {
-            let recorder_msg = recorder_receiver
+            let maybe_audio = recorder_receiver
                 .recv()
                 .expect("Audio receival failed miserably");
 
-            // We are told to shutdown so we do so.
-            if recorder_msg.is_none() {
-                return;
-            }
-
-            let maybe_audio = recorder_msg.unwrap();
             match maybe_audio {
-                Some(audio) => {
+                AudioMessage::Audio(audio) => {
                     if counter == 0 {
-                        eprintln!("[stter] rceived first bit of new recording");
+                        eprintln!("[stter] Received first bit of new recording");
                     }
                     counter += 1;
                     // We got send some new audio to process.
@@ -65,7 +59,6 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
                     // Send only intermediate results just so often.
                     // todo: why 100?
                     if counter % 100 != 0 {
-                        // eprintln!("continue with counter == {}", counter);
                         continue;
                     }
 
@@ -79,12 +72,11 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
 
                         gui_sender
                             .send(DecodedSpeech::Intermediate(intermediate))
-                            .expect("Sending of decoded speech faied miserably.");
+                            .expect("Sending of decoded speech failed miserably.");
                     }
                 }
-                None => {
+                AudioMessage::EndOf => {
                     eprintln!("[stter] Got told to end, finishing the stream then");
-                    // We got a "end of recording" message.
                     let final_s = stream.finish_stream();
                     if final_s.is_ok() {
                         gui_sender
@@ -95,6 +87,7 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
                     }
                     break;
                 }
+                AudioMessage::Exit => return,
             };
         }
     }

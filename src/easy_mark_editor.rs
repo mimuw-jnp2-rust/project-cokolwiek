@@ -120,6 +120,7 @@ impl eframe::App for TextEditor {
             self.end_recording();
         } else if self.is_recording {
             self.manage_recording();
+            // need to check for incoming results quite often hence the request
             ctx.request_repaint();
         }
     }
@@ -303,6 +304,7 @@ impl TextEditor {
         };
     }
 
+    // todo: we do not need both of those functions currently, common code
     fn end_recording(&mut self) {
         let speech = self.stter_receiver.try_recv();
         if speech.is_err() {

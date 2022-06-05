@@ -1,15 +1,9 @@
-#![forbid(unsafe_code)]
-#![cfg_attr(not(debug_assertions), deny(warnings))] // Forbid warnings in release builds
-#![warn(clippy::all, rust_2018_idioms)]
-
 use eframe::egui::vec2;
 use std::sync::mpsc::{Receiver, Sender, channel};
 
 use rust_shit_editor::recorder;
 use rust_shit_editor::stter;
 
-// When compiling natively:
-#[cfg(not(target_arch = "wasm32"))]
 fn main() {
     let (gui_sender, stter_receiver) = channel::<stter::DecodedSpeech>();
     let (stter_sender, recorder_receiver) = channel::<recorder::AudioMessage>();
