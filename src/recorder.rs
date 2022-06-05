@@ -5,10 +5,8 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 
-// todo: this should be redesigned actually
-// the stter should always start with a totally new and clean stream i think
-// and i am not sure if this is what happens as on subsequent it works
-// differently?...
+// todo: this should be redesigned actually, custom enum and a 3 way branched
+// match in stter.rs
 pub type AudioMessage = Option<Option<Vec<i16>>>;
 
 // todo: this should be moved to the gui module for consistency (consistency ie
@@ -19,11 +17,9 @@ pub enum GuiOrders {
     Exit,
 }
 
-// todo mutex for a bool to check whether we should send or not as the
-// pause method mya not be reliable?
-
 pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMessage>) {
     let host = cpal::default_host();
+    // todo: test this with a microphone from headphones
     let dev = host.default_input_device().expect("No input device!");
     let config = dev
         .supported_input_configs()
@@ -35,7 +31,12 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
               config.min_sample_rate().0, config.max_sample_rate().0);
 
     eprintln!("[recorder] there are {} channels", config.channels());
-    // let sr = config.max_sample_rate();
+    // todo: make this work for stereo? do i really need to though?
+    // stereo_to_mono function avalaible here:
+    // https://github.com/tazz4843/coqui-stt/blob/master/examples/threads.rs
+    // at the bottom
+    assert!(config.channels() == 1);
+
     // todo: perhaps this should be rather set according to what the model says?
     // though obv the coqui models all run on 16 kHz so maybe hardcode it
     // or make a const u32 for that?

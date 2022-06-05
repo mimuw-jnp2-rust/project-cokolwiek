@@ -275,6 +275,10 @@ impl TextEditor {
         self.backup_code = self.code.clone();
     }
 
+    // Both manage_recording and end_recording receive info from the stter in
+    // a non-blocking fashion as we want the gui to still be refreshed often enough
+    // and respond to our clicks etc.
+    // todo: recv with timeout would be better than try_recv? less consuming
     fn manage_recording(&mut self) {
         let speech = self.stter_receiver.try_recv();
         if speech.is_err() {
@@ -291,7 +295,6 @@ impl TextEditor {
                 eprintln!("[gui::manage_recording] got an intermediate bit: \"{}\"", s);
                 self.code = self.backup_code.clone();
                 self.code.push_str(&s);
-                self.code.push_str(" ... [decoding] ...");
             }
             DecodedSpeech::Final(_) => panic!(
                 "Editor logic error! We should only receive intermediate decoded text fragments now!"
@@ -315,7 +318,6 @@ impl TextEditor {
                 eprintln!("[gui::end_recording] got an intermediate bit: \"{}\"", s);
                 self.code = self.backup_code.clone();
                 self.code.push_str(&s);
-                self.code.push_str(" ... [decoding] ...");
             },
             DecodedSpeech::Final(s) => {
                 eprintln!("Received final bit of rcording!");

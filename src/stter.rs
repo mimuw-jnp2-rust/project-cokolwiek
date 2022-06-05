@@ -13,7 +13,7 @@ pub enum DecodedSpeech {
     Final(String),
 }
 
-const MODEL_DIR: &str = "en-model";
+const DEFAULT_MODEL_DIR: &str = "en-model";
 
 pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<DecodedSpeech>) {
     let (model_name, scorer_name) = get_model_scorer_names();
@@ -100,8 +100,20 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
     }
 }
 
+// todo: surely this can be done in smarter way without copying strings
+// shouldn't the argv strings have 'static lifetimes anyway as our default?
+fn get_model_dir() -> String {
+    let args: Vec<_> = std::env::args().skip(1).collect();
+    match args.get(0) {
+        Some(s) => s.into(),
+        None => DEFAULT_MODEL_DIR.into(),
+    }
+}
+
 fn get_model_scorer_names() -> (Box<Path>, Option<Box<Path>>) {
-    let dir_path = Path::new(MODEL_DIR);
+    let model_dir = get_model_dir();
+    println!("Looking for a model in the {} directory", model_dir);
+    let dir_path = Path::new(&model_dir);
     let mut model_name: Box<Path> = dir_path.join("output_graph.pb").into_boxed_path();
     let mut scorer_name: Option<Box<Path>> = None;
     // search for model in model directory
