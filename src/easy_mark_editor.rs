@@ -116,6 +116,7 @@ impl epi::App for TextEditor {
             self.end_recording();
         } else if self.is_recording {
             self.manage_recording();
+            ctx.request_repaint();
         }
     }
 }
@@ -285,6 +286,7 @@ impl TextEditor {
 
         match speech {
             DecodedSpeech::Intermediate(s) => {
+                eprintln!("[gui::manage_recording] got an intermediate bit: \"{}\"", s);
                 self.code = self.backup_code.clone();
                 self.code.push_str(&s);
                 self.code.push_str(" ... [decoding] ...");
@@ -296,7 +298,6 @@ impl TextEditor {
     }
 
     fn end_recording(&mut self) {
-        eprintln!("Trying to stop recording!");
         let speech = self.stter_receiver.try_recv();
         if speech.is_err() {
             let err = speech.unwrap_err();
@@ -309,10 +310,11 @@ impl TextEditor {
 
         match speech {
             DecodedSpeech::Intermediate(s) => {
+                eprintln!("[gui::end_recording] got an intermediate bit: \"{}\"", s);
                 self.code = self.backup_code.clone();
                 self.code.push_str(&s);
                 self.code.push_str(" ... [decoding] ...");
-            }
+            },
             DecodedSpeech::Final(s) => {
                 eprintln!("Received final bit of rcording!");
                 self.code = self.backup_code.clone();

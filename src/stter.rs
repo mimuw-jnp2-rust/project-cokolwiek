@@ -26,10 +26,18 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
     }
 
     let model = Arc::new(m);
+    let sr = model.get_sample_rate() as u32;
+    eprintln!("Model's expected sample rate is {}", sr);
 
     loop {
+        eprintln!("[stter] creating new stream...");
         let mut stream =
             Stream::from_model(Arc::clone(&model)).expect("Model creation failed miserably");
+
+        // we do not want intermediate decode after each sample as
+        // they are sampled at a high rate and an average person says
+        // something like 4-5 words per second
+        let mut counter: u32 = 0;
 
         loop {
             let recorder_msg = recorder_receiver
@@ -44,18 +52,35 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
             let maybe_audio = recorder_msg.unwrap();
             match maybe_audio {
                 Some(audio) => {
-                    eprintln!("[stter] Got Some(audio)");
+                    if counter == 0 {
+                        eprintln!("[stter] rceived first bit of new recording");
+                    }
+                    counter += 1;
                     // We got send some new audio to process.
                     stream.feed_audio(&audio[..]);
+
+                    // Send only intermediate results just so often.
+                    // todo: why 100?
+                    if counter % 100 != 0 {
+                        // eprintln!("continue with counter == {}", counter);
+                        continue;
+                    }
+
                     let intermediate = stream.intermediate_decode();
                     if intermediate.is_ok() {
+                        let intermediate = intermediate.unwrap();
+                        eprintln!(
+                            "[stter] counter = {}, sending intermediate results: \"{}\"",
+                            counter, intermediate
+                        );
+
                         gui_sender
-                            .send(DecodedSpeech::Intermediate(intermediate.unwrap()))
+                            .send(DecodedSpeech::Intermediate(intermediate))
                             .expect("Sending of decoded speech faied miserably.");
                     }
                 }
                 None => {
-                    eprintln!("[stter] Got told to fuck off, finishing the stream then");
+                    eprintln!("[stter] Got told to end, finishing the stream then");
                     // We got a "end of recording" message.
                     let final_s = stream.finish_stream();
                     if final_s.is_ok() {

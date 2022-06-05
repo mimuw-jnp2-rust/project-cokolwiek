@@ -5,6 +5,10 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 
+// todo: this should be redesigned actually
+// the stter should always start with a totally new and clean stream i think
+// and i am not sure if this is what happens as on subsequent it works
+// differently?...
 pub type AudioMessage = Option<Option<Vec<i16>>>;
 
 // todo: this should be moved to the gui module for consistency (consistency ie
@@ -27,12 +31,16 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
         .find(|c| c.sample_format() == cpal::SampleFormat::I16)
         .expect("Failed to find required input device config ie. i16 (??)");
 
-    eprintln!("smapele rate is from {} to {}",
+    eprintln!("[recorder] smapele rate is from {} to {}",
               config.min_sample_rate().0, config.max_sample_rate().0);
 
+    eprintln!("[recorder] there are {} channels", config.channels());
     // let sr = config.max_sample_rate();
-    // todo select a good bloody number here
-    let sr = cpal::SampleRate(40);
+    // todo: perhaps this should be rather set according to what the model says?
+    // though obv the coqui models all run on 16 kHz so maybe hardcode it
+    // or make a const u32 for that?
+    let sr = cpal::SampleRate(16000);
+    eprintln!("[recorder] Creating a stream with sample rate = {} Hz", sr.0);
     let config = config.with_sample_rate(sr);
 
     let err_fn = move |err| {
