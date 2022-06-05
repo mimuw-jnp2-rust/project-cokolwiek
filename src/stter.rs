@@ -63,8 +63,7 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
                     }
 
                     let intermediate = stream.intermediate_decode();
-                    if intermediate.is_ok() {
-                        let intermediate = intermediate.unwrap();
+                    if let Ok(intermediate) = intermediate {
                         eprintln!(
                             "[stter] counter = {}, sending intermediate results: \"{}\"",
                             counter, intermediate
@@ -78,16 +77,19 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
                 AudioMessage::EndOf => {
                     eprintln!("[stter] Got told to end, finishing the stream then");
                     let final_s = stream.finish_stream();
-                    if final_s.is_ok() {
+                    if let Ok(final_s) = final_s {
                         gui_sender
-                            .send(DecodedSpeech::Final(final_s.unwrap()))
+                            .send(DecodedSpeech::Final(final_s))
                             .expect("Sending of decoded speech failed miserably");
                     } else {
                         eprintln!("Failed to finish the stream: {}", final_s.unwrap_err());
                     }
                     break;
                 }
-                AudioMessage::Exit => return,
+                AudioMessage::Exit => {
+                    eprintln!("[stter] Exiting gracefully.");
+                    return
+                },
             };
         }
     }
@@ -103,6 +105,7 @@ fn get_model_dir() -> String {
     }
 }
 
+// todo do those need to be boxes? copied without thinkin rly
 fn get_model_scorer_names() -> (Box<Path>, Option<Box<Path>>) {
     let model_dir = get_model_dir();
     println!("Looking for a model in the {} directory", model_dir);
@@ -110,19 +113,17 @@ fn get_model_scorer_names() -> (Box<Path>, Option<Box<Path>>) {
     let mut model_name: Box<Path> = dir_path.join("output_graph.pb").into_boxed_path();
     let mut scorer_name: Option<Box<Path>> = None;
     // search for model in model directory
-    for file in dir_path
+    for f in dir_path
         .read_dir()
-        .expect("Specified model dir is not a dir")
+        .expect("Specified model dir is not a dir").flatten()
     {
-        if let Ok(f) = file {
-            let file_path = f.path();
-            if file_path.is_file() {
-                if let Some(ext) = file_path.extension() {
-                    if ext == "pb" || ext == "pbmm" || ext == "tflite" {
-                        model_name = file_path.into_boxed_path();
-                    } else if ext == "scorer" {
-                        scorer_name = Some(file_path.into_boxed_path());
-                    }
+        let file_path = f.path();
+        if file_path.is_file() {
+            if let Some(ext) = file_path.extension() {
+                if ext == "pb" || ext == "pbmm" || ext == "tflite" {
+                    model_name = file_path.into_boxed_path();
+                } else if ext == "scorer" {
+                    scorer_name = Some(file_path.into_boxed_path());
                 }
             }
         }

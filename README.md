@@ -4,6 +4,9 @@ zrobione stt, a poza tym bumped up egui o jedną wersję w górę, co
 początkowo meeega zepsuło, ale dzięki temu super kręcące się kółeczko
 jest (!)
 
+##### na ile działa to stt?
+_comme ci, comme ça_
+
 ### set up pod stt aka tutorial tzw
 _shit to text_
 
@@ -46,6 +49,9 @@ also according to them:
 
 i chyba `libgtk-3-dev` dla rfd?
 
+jeśli jakieś problemy pojawią się z `alsa` to maybe install `alsa-lib`
+czy cos? poszukamy najwyzej
+
 aha i jesli cos nie dziala to consider deleting Cargo.lock, ale to powinno juz dzialac?
 mi czasem rust-analyzer tyllko cos buguje, ale malo
 
@@ -57,6 +63,8 @@ mi czasem rust-analyzer tyllko cos buguje, ale malo
   jakoś gdzieś jest miejsce koło `TextEdit` gdzie to widać? aucune idee
 - [ ] saving podczas recordingu nie powinien być UB, tylko niedozwolony/coś sensible
 - ^ duża szansa, że ktoś zechce to sprawdzic
+- [ ] pewnie wpisaliśmy coś jeszcze do docsa z tymi planami?
+- [ ] trzeba przetrenoać mówienie do komputerka 
 - [ ] ktoś inny błagam niech to zreviewuje
 - [X] quiting jak [tutaj](https://github.com/emilk/egui/blob/master/examples/confirm_exit/src/main.rs) bo system sie trikuje
 - [X] dodać do structu aplikacji jakiś path currently edytowanego pliku

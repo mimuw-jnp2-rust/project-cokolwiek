@@ -102,6 +102,7 @@ impl eframe::App for TextEditor {
             if self.is_exiting {
                 self.should_exit = self.quit();
                 if self.should_exit {
+                    // todo: should the stter send any confirmation to wait for?
                     self.recorder_sender
                         .send(GuiOrders::Exit)
                         .expect("Failed to send Exit to recorder!");
@@ -283,8 +284,7 @@ impl TextEditor {
     // todo: recv with timeout would be better than try_recv? less consuming
     fn manage_recording(&mut self) {
         let speech = self.stter_receiver.try_recv();
-        if speech.is_err() {
-            let err = speech.unwrap_err();
+        if let Err(err) = speech {
             match err {
                 std::sync::mpsc::TryRecvError::Empty => return,
                 std::sync::mpsc::TryRecvError::Disconnected => panic!("Failed to receive!"),
@@ -307,8 +307,7 @@ impl TextEditor {
     // todo: we do not need both of those functions currently, common code
     fn end_recording(&mut self) {
         let speech = self.stter_receiver.try_recv();
-        if speech.is_err() {
-            let err = speech.unwrap_err();
+        if let Err(err) = speech {
             match err {
                 std::sync::mpsc::TryRecvError::Empty => return,
                 std::sync::mpsc::TryRecvError::Disconnected => panic!("Failed to receive!"),

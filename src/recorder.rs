@@ -89,7 +89,7 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
         {
             GuiOrders::Record => {
                 // sleep for a short while to make sure it starts smoothly
-                std::thread::sleep(Duration::from_millis(50));
+                std::thread::sleep(Duration::from_millis(75));
                 {
                     *should_send.lock().expect("Poisoned should_send mutex!") = true;
                 }
@@ -108,6 +108,7 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
                 eprintln!("[recorder] Sent EndOf to the stter.");
             }
             GuiOrders::Exit => {
+                eprintln!("[recorder] Told to exit, doing so and notifying the stter.");
                 stt_sender
                     .lock()
                     .expect("Poisoned stt_sender mutex!")
