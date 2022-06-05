@@ -36,11 +36,23 @@ bez tego cargo run ani cargo build nie zadzialaja
 
 1. `sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev libxkbcommon-dev libssl-dev` (na linuxie)
 
-2. `rustup update`
+#### kompylacja à la polaco
 
-3. `cargo run`
+```
+cargo run -- pl-model
+```
+po uprzednim ściągnięciu `pl-model`
 
----
+
+### dependencies
+also according to them:
+>On Linux you need to first run:
+>`sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev libxkbcommon-dev libssl-dev`
+
+i chyba `libgtk-3-dev` dla rfd?
+
+aha i jesli cos nie dziala to consider deleting Cargo.lock, ale to powinno juz dzialac?
+mi czasem rust-analyzer tyllko cos buguje, ale malo
 
 ## todo ważne dla io
 

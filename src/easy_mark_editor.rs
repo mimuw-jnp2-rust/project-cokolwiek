@@ -1,5 +1,5 @@
-use eframe::egui::{text_edit::CCursorRange, *};
 use eframe::egui;
+use eframe::egui::{text_edit::CCursorRange, *};
 use rfd::{FileDialog, MessageDialog};
 use std::fs::File;
 use std::io::prelude::*;
@@ -42,6 +42,7 @@ impl eframe::App for TextEditor {
                 frame.quit();
             }
 
+            // This part of ui handles stt-ing.
             if self.is_recording && self.is_stopping {
                 ui.spinner();
             } else {
@@ -51,14 +52,15 @@ impl eframe::App for TextEditor {
                     "Stop"
                 };
 
-                if ui.button(format!("{:^17}", dictate_bttn)).clicked() {
+                if ui.button(format!("{:^16}", dictate_bttn)).clicked() {
                     if !self.is_recording {
                         self.start_recording();
                     } else if !self.is_stopping {
-                    eprintln!("The user wants to quit, let him...");
-                        self.recorder_sender.send(GuiOrders::Stop)
+                        eprintln!("Asking the recorder to stop recording.");
+                        self.recorder_sender
+                            .send(GuiOrders::Stop)
                             .expect("Failed to send recording-stopping message!");
-                    self.is_stopping = true;
+                        self.is_stopping = true;
                     }
                 }
             }
@@ -100,7 +102,8 @@ impl eframe::App for TextEditor {
             if self.is_exiting {
                 self.should_exit = self.quit();
                 if self.should_exit {
-                    self.recorder_sender.send(GuiOrders::Exit)
+                    self.recorder_sender
+                        .send(GuiOrders::Exit)
                         .expect("Failed to send Exit to recorder!");
                     frame.quit();
                 } else {
@@ -217,8 +220,6 @@ impl TextEditor {
         egui::Grid::new("controls").show(ui, |ui| {
             ui.checkbox(&mut self.show_rendered, "Show rendered");
             ui.end_row();
-            // egui::reset_button(ui, self);
-            // ui.end_row();
         });
 
         ui.separator();
@@ -292,9 +293,9 @@ impl TextEditor {
 
         match speech {
             DecodedSpeech::Intermediate(s) => {
-                eprintln!("[gui::manage_recording] got an intermediate bit: \"{}\"", s);
                 self.code = self.backup_code.clone();
                 self.code.push_str(&s);
+                self.code.push_str("...");
             }
             DecodedSpeech::Final(_) => panic!(
                 "Editor logic error! We should only receive intermediate decoded text fragments now!"
@@ -315,12 +316,11 @@ impl TextEditor {
 
         match speech {
             DecodedSpeech::Intermediate(s) => {
-                eprintln!("[gui::end_recording] got an intermediate bit: \"{}\"", s);
                 self.code = self.backup_code.clone();
                 self.code.push_str(&s);
-            },
+                self.code.push_str("...");
+            }
             DecodedSpeech::Final(s) => {
-                eprintln!("Received final bit of rcording!");
                 self.code = self.backup_code.clone();
                 self.backup_code = String::new();
                 self.code.push_str(&s);
