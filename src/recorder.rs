@@ -47,21 +47,23 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
         eprintln!("Error on stream: {}", err);
     };
 
+    let should_send = Arc::new(Mutex::new(false));
+    let should_send2 = should_send.clone();
     let stt_sender = Arc::new(Mutex::new(stter_sender));
     let stt_sender2 = stt_sender.clone();
-    // todo: stt sender should get mutexed as it should send both here and in the
-    // bottom most loop!
     let record_callback = move |data: &[i16], _: &_| {
-        let data = data.to_vec();
-        stt_sender
-            .lock()
-            .expect("Poisoned mutex!")
-            .send(Some(Some(data)))
-            .expect("Failed to send data to stter!");
-        // stter_sender.send(Some()
+        if *should_send.lock().expect("Mutex error") {
+            let data = data.to_vec();
+            stt_sender
+                .lock()
+                .expect("Poisoned mutex!")
+                .send(Some(Some(data)))
+                .expect("Failed to send data to stter!");
+        }
     };
 
     let stt_sender = stt_sender2;
+    let should_send = should_send2;
 
     let stream = dev
         .build_input_stream(&config.into(), record_callback, err_fn)
@@ -73,10 +75,18 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
             .recv()
             .expect("Failed to receive messages from gui!")
         {
-            GuiOrders::Record => stream.play().expect("Failed to start recording!"),
+            GuiOrders::Record => {
+                {
+                    *should_send.lock().expect("Mutex failure") = true;
+                }
+                stream.play().expect("Failed to start recording!");
+            },
             GuiOrders::Stop => {
                 eprintln!("[recorder] Sending Some(None)) to the stter!");
                 stream.pause().expect("Failed to stop recording!");
+                {
+                    *should_send.lock().expect("Mutex failure") = false;
+                }
                 // todo: wait here? until some time passes? so all audio is cleared?
                 stt_sender
                     .lock()

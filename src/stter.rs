@@ -31,6 +31,9 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
 
     loop {
         eprintln!("[stter] creating new stream...");
+        // todo: i only create new stream each time, should i create new model?
+        // there is some weird behaviour, all im sayin'
+        // todo model.tostream?
         let mut stream =
             Stream::from_model(Arc::clone(&model)).expect("Model creation failed miserably");
 
