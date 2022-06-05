@@ -12,10 +12,10 @@ to zajmie chwilkę poniewaz to sążny model jest
 
 dla polskiego analogicznie w `pl-model`, ale to na rzie wgl unimplemented więc no
 
-#### lib-stt
-ważniejsze jest natomiast zainstalowanie samej biblioteki
+#### libstt
+ważniejsze jest natomiast zainstalowanie samej biblioteczki
 ```sh
-cd lib-stt
+cd libstt
 ./setup.sh
 ```
 

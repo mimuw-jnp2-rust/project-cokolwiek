@@ -12,5 +12,5 @@ pl-model/*.tflite
 pl-model/alphabet.txt
 
 # library
-lib-stt/*.zip
-lib-stt/*.so*
+libstt/*.zip
+libstt/*.so*
