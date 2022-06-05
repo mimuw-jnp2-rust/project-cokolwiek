@@ -1,5 +1,5 @@
 use eframe::egui::{text_edit::CCursorRange, *};
-use eframe::{egui, epi};
+use eframe::egui;
 use rfd::{FileDialog, MessageDialog};
 use std::fs::File;
 use std::io::prelude::*;
@@ -28,37 +28,38 @@ impl PartialEq for TextEditor {
     }
 }
 
-impl epi::App for TextEditor {
+impl eframe::App for TextEditor {
     fn on_exit_event(&mut self) -> bool {
         self.is_exiting = true;
         self.should_exit
     }
 
-    fn name(&self) -> &str {
-        "Rust text editor"
-    }
-
-    fn update(&mut self, ctx: &eframe::egui::Context, frame: &epi::Frame) {
+    fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {
         ctx.set_visuals(egui::Visuals::dark());
         egui::SidePanel::right("side_panel").show(ctx, |ui| {
             if ui.button(format!("{:^17}", "Quit")).clicked() {
                 eprintln!("Quitting via the 'Quit' button");
                 frame.quit();
             }
-            let dictate_bttn = if !self.is_recording && !self.is_stopping {
-                "Dictate"
-            } else {
-                "Stop"
-            };
 
-            if ui.button(format!("{:^17}", dictate_bttn)).clicked() {
-                if !self.is_recording {
-                    self.start_recording();
-                } else if !self.is_stopping {
+            if self.is_recording && self.is_stopping {
+                ui.spinner();
+            } else {
+                let dictate_bttn = if !self.is_recording && !self.is_stopping {
+                    "Dictate"
+                } else {
+                    "Stop"
+                };
+
+                if ui.button(format!("{:^17}", dictate_bttn)).clicked() {
+                    if !self.is_recording {
+                        self.start_recording();
+                    } else if !self.is_stopping {
                     eprintln!("The user wants to quit, let him...");
-                    self.recorder_sender.send(GuiOrders::Stop)
-                        .expect("Failed to send recording-stopping message!");
+                        self.recorder_sender.send(GuiOrders::Stop)
+                            .expect("Failed to send recording-stopping message!");
                     self.is_stopping = true;
+                    }
                 }
             }
 
@@ -123,6 +124,7 @@ impl epi::App for TextEditor {
 
 impl TextEditor {
     pub fn new(
+        _cc: &eframe::CreationContext<'_>,
         stter_receiver: Receiver<DecodedSpeech>,
         recorder_sender: Sender<GuiOrders>,
     ) -> Self {
