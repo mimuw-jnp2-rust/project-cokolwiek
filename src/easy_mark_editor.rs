@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, Sender};
+use std::thread::JoinHandle;
 
 use crate::recorder::GuiOrders;
 use crate::stter::DecodedSpeech;
@@ -13,13 +14,19 @@ pub struct TextEditor {
     code: String,
     show_rendered: bool,
     file_path: Option<PathBuf>,
+    // Quit only when sure we want to quit.
     should_exit: bool,
     is_exiting: bool,
+    // Channels for passing messages regarding voice-writing.
     stter_receiver: Receiver<DecodedSpeech>,
     recorder_sender: Sender<GuiOrders>,
+    // Coordinating waiting for decoded speech.
     is_recording: bool,
     is_stopping: bool,
+    // Keep that when receiving intermediate results.
     backup_code: String,
+    // Join handles for all threads communicating with the editor.
+    jhandles: Vec<JoinHandle<()>>,
 }
 
 impl PartialEq for TextEditor {
@@ -106,6 +113,15 @@ impl eframe::App for TextEditor {
                     self.recorder_sender
                         .send(GuiOrders::Exit)
                         .expect("Failed to send Exit to recorder!");
+
+                    let mut jhandles = vec![];
+                    std::mem::swap(&mut jhandles, &mut self.jhandles);
+                    for jh in jhandles {
+                        jh.join().expect("Failure upon joining a thread!");
+                    }
+
+                    // Here we actually quit for real hence all of the above.
+                    eprintln!("[gui] End of times.");
                     frame.quit();
                 } else {
                     self.is_exiting = false;
@@ -132,6 +148,7 @@ impl TextEditor {
         _cc: &eframe::CreationContext<'_>,
         stter_receiver: Receiver<DecodedSpeech>,
         recorder_sender: Sender<GuiOrders>,
+        jhandles: Vec<JoinHandle<()>>,
     ) -> Self {
         Self {
             code: String::new(),
@@ -144,6 +161,7 @@ impl TextEditor {
             is_recording: false,
             is_stopping: false,
             backup_code: String::new(),
+            jhandles,
         }
     }
 
