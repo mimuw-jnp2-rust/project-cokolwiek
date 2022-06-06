@@ -1,5 +1,5 @@
 use eframe::egui::vec2;
-use std::sync::mpsc::{Receiver, Sender, channel};
+use std::sync::mpsc::{channel, Receiver, Sender};
 
 use rust_shit_editor::recorder;
 use rust_shit_editor::stter;
@@ -36,8 +36,11 @@ fn main() {
         ..eframe::NativeOptions::default()
     };
 
-    eframe::run_native("rust shit editor", native_options,
-                       Box::new(|cc| init_ed(cc, stter_receiver, recorder_sender)));
+    eframe::run_native(
+        "rust shit editor",
+        native_options,
+        Box::new(|cc| init_ed(cc, stter_receiver, recorder_sender)),
+    );
 
     // todo: the code below would have been unreachable thus it is advised that
     // we add the JoinHandles for these two threads as fields in our app and
@@ -48,9 +51,11 @@ fn main() {
 
 // this is here as the closure above does not work due to some rust clownery
 // https://github.com/rust-lang/rust/issues/70263
-fn init_ed(cc: &eframe::CreationContext<'_>,
-           stter_receiver: Receiver<stter::DecodedSpeech>,
-           recorder_sender: Sender<recorder::GuiOrders>) -> Box<dyn eframe::App> {
+fn init_ed(
+    cc: &eframe::CreationContext<'_>,
+    stter_receiver: Receiver<stter::DecodedSpeech>,
+    recorder_sender: Sender<recorder::GuiOrders>,
+) -> Box<dyn eframe::App> {
     // https://stackoverflow.com/questions/43725433/why-cant-a-struct-be-assigned-to-a-binding-with-a-trait-it-implements
     let boexed: Box<dyn eframe::App> = Box::new(rust_shit_editor::TextEditor::new(
         cc,

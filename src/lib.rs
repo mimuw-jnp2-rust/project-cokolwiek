@@ -6,5 +6,5 @@ pub use easy_mark_editor::TextEditor;
 pub use easy_mark_parser as parser;
 pub use easy_mark_viewer::easy_mark;
 
-pub mod stter;
 pub mod recorder;
+pub mod stter;

@@ -88,8 +88,8 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
                 }
                 AudioMessage::Exit => {
                     eprintln!("[stter] Exiting gracefully.");
-                    return
-                },
+                    return;
+                }
             };
         }
     }
@@ -115,7 +115,8 @@ fn get_model_scorer_names() -> (Box<Path>, Option<Box<Path>>) {
     // search for model in model directory
     for f in dir_path
         .read_dir()
-        .expect("Specified model dir is not a dir").flatten()
+        .expect("Specified model dir is not a dir")
+        .flatten()
     {
         let file_path = f.path();
         if file_path.is_file() {

@@ -89,6 +89,17 @@ mi czasem rust-analyzer tyllko cos buguje, ale malo
   - [ ] itp?
   - [ ] równe justified te przyciski, to już widzę że jest zrobione dla wiekszosci
   - [ ] pisać gdzieś currently edited file jeśli znamy nazwę, powinno to być łatwe
+- [ ] _(opcjonalnie)_ użyć parsera opartego na _functional parsing_ i _parsing combinators_ 
+      (fajne koncepty serio) jak ten
+      [tutaj](https://github.com/hgm-king/prose/blob/master/src/parser.rs)
+      (biblioteka [nom](https://docs.rs/nom/latest/nom/)) budującego
+      takie [samo AST (drzewko markdownowe)](https://github.com/hgm-king/prose/blob/master/src/lib.rs)
+      jak tam i przerobić parser do naszego formatu (easy chyba, malo zmian) oraz przerobić 
+      później ten `viewer` by z `Vec<Markdown>` z drugiego linku tworzył `egui::RichText`
+      
+      myślę, że to nie jest jakieś kluczowe, ale można rozważyć by na
+      jnp2 mieć mniej pozrzynany porjekt + te parsing combinators to
+      fajny paradygmat?
 - [X] dać własne nazwy structom miast tych skradzionych
 - [ ] dać własne nazwy plikom...
 - [X] wywalić te jakieś pozostałości z template'u, które polegały na tych webowych 

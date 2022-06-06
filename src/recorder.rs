@@ -58,21 +58,19 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
     let should_send = Arc::new(Mutex::new(false));
     let should_send2 = should_send.clone();
 
-    let stt_sender = Arc::new(Mutex::new(stter_sender));
-    let stt_sender2 = stt_sender.clone();
+    // This are "mpsc" channels -- multiproducer, signgle consumer
+    let stter_sender2 = stter_sender.clone();
 
     let record_callback = move |data: &[i16], _: &_| {
         if *should_send.lock().expect("Poisoned should_send mutex!") {
             let data = data.to_vec();
-            stt_sender
-                .lock()
-                .expect("Poisoned stt_sender mutex!")
+            stter_sender
                 .send(AudioMessage::Audio(data))
-                .expect("Failed to send data to stter!");
+                .expect("Failed to send audio data to stter!");
         }
     };
 
-    let stt_sender = stt_sender2;
+    let stt_sender = stter_sender2;
     let should_send = should_send2;
 
     let stream = dev
@@ -100,18 +98,16 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
                 {
                     *should_send.lock().expect("Poisoned should_send mutex!") = false;
                 }
+                // also sleep here so that the record_callback stops smoothly
+                std::thread::sleep(Duration::from_millis(50));
                 stt_sender
-                    .lock()
-                    .expect("Poisoned stt_sender mutex!")
                     .send(AudioMessage::EndOf)
-                    .expect("Failed to send None to the stter!");
+                    .expect("Failed to send EndOf to the stter!");
                 eprintln!("[recorder] Sent EndOf to the stter.");
             }
             GuiOrders::Exit => {
                 eprintln!("[recorder] Told to exit, doing so and notifying the stter.");
                 stt_sender
-                    .lock()
-                    .expect("Poisoned stt_sender mutex!")
                     .send(AudioMessage::Exit)
                     .expect("Failed to send Exit to the stter!");
                 return;
