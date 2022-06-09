@@ -57,7 +57,7 @@ mi czasem rust-analyzer tyllko cos buguje, ale malo
 
 ## todo ważne dla io
 
-- [ ] niech pyta o saving jedynie when edited, a nie zawsze, pytal o to pan g ostatnio :/
+- [X] niech pyta o saving jedynie when edited, a nie zawsze, pytal o to pan g ostatnio :/
 - ^ **ważne** actually, trochę nie wiem jak to zrobić, trzymać backup code między update;ami
   na wzór tego jak go trzymam podczas odbioru komunkatów od stt? compare with saved file?
   jakoś gdzieś jest miejsce koło `TextEdit` gdzie to widać? aucune idee

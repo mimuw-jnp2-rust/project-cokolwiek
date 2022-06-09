@@ -14,6 +14,7 @@ pub struct TextEditor {
     code: String,
     show_rendered: bool,
     file_path: Option<PathBuf>,
+    has_changed: bool,
     // Quit only when sure we want to quit.
     should_exit: bool,
     is_exiting: bool,
@@ -154,6 +155,7 @@ impl TextEditor {
             code: String::new(),
             show_rendered: true,
             file_path: None,
+            has_changed: true,
             should_exit: false,
             is_exiting: false,
             stter_receiver,
@@ -208,28 +210,35 @@ impl TextEditor {
             Err(err) => return Err(err),
         }
 
+        self.has_changed = false;
         Ok(())
     }
 
     // true if editor can exit (save not requested or succeed)
     fn quit(&mut self) -> bool {
-        let mess = MessageDialog::new()
-            .set_title("Quit")
-            .set_description("Do you want to save before quitting?")
-            .set_buttons(rfd::MessageButtons::YesNo)
-            .show();
+        // the editr asks for confirmation only if there are any unsaved changes
+        // todo: this if could be rewritten in some nicer way, could it not?
+        if self.has_changed {
+            let mess = MessageDialog::new()
+                .set_title("Quit")
+                .set_description("Do you want to save your changes??")
+                .set_buttons(rfd::MessageButtons::YesNo)
+                .show();
 
-        if mess {
-            match self.save(false) {
-                Ok(()) => true,
-                Err(_) => {
-                    MessageDialog::new()
-                        .set_title("Quitting")
-                        .set_description("Failed to save the file")
-                        .set_buttons(rfd::MessageButtons::Ok)
-                        .show();
-                    false
+            if mess {
+                match self.save(false) {
+                    Ok(()) => true,
+                    Err(_) => {
+                        MessageDialog::new()
+                            .set_title("Quitting")
+                            .set_description("Failed to save the file")
+                            .set_buttons(rfd::MessageButtons::Ok)
+                            .show();
+                        false
+                    }
                 }
+            } else {
+                true
             }
         } else {
             true
@@ -241,6 +250,19 @@ impl TextEditor {
             ui.checkbox(&mut self.show_rendered, "Show rendered");
             ui.end_row();
         });
+
+        // Display the file name if we have an assigned file
+        // todo: make this bigger and next to the button redner button?
+        if let Some(p) = &self.file_path {
+            // in rust the path may be really f-ed up so it is all options
+            if let Some(s) = p.file_name().map(|s| s.to_str()).flatten() {
+                if self.has_changed {
+                    ui.label(format!("{}*", s));
+                } else {
+                    ui.label(format!("{}", s));
+                }
+            }
+        }
 
         ui.separator();
 
@@ -276,6 +298,11 @@ impl TextEditor {
                     .interactive(!self.is_recording), // not writable while recording
             )
         };
+
+        // Unsaved changes!
+        if response.changed() {
+            self.has_changed = true;
+        }
 
         if let Some(mut state) = TextEdit::load_state(ui.ctx(), response.id) {
             if let Some(mut ccursor_range) = state.ccursor_range() {
