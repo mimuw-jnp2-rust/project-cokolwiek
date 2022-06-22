@@ -2,8 +2,8 @@ use eframe::egui::vec2;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 
-use rust_shit_editor::recorder;
-use rust_shit_editor::stter;
+use rust_text_editor::recorder;
+use rust_text_editor::stter;
 
 fn main() {
     let (gui_sender, stter_receiver) = channel::<stter::DecodedSpeech>();
@@ -22,7 +22,7 @@ fn main() {
     // https://github.com/rust-lang/rust/issues/97362
     // ^ this shoyld fix that in fututre i guess??
     // let editor = move |cc| {
-    //     let boexed: Box<dyn eframe::App> = Box::new(rust_shit_editor::TextEditor::new(
+    //     let boexed: Box<dyn eframe::App> = Box::new(rust_text_editor::TextEditor::new(
     //         cc,
     //         stter_receiver,
     //         recorder_sender,
@@ -36,7 +36,7 @@ fn main() {
     };
 
     eframe::run_native(
-        "rust shit editor",
+        "rust text editor",
         native_options,
         Box::new(|cc| init_ed(cc, stter_receiver, recorder_sender, recorder_jh, stter_jh)),
     );
@@ -52,7 +52,7 @@ fn init_ed(
     stter_jh: thread::JoinHandle<()>,
 ) -> Box<dyn eframe::App> {
     // https://stackoverflow.com/questions/43725433/why-cant-a-struct-be-assigned-to-a-binding-with-a-trait-it-implements
-    let boexed: Box<dyn eframe::App> = Box::new(rust_shit_editor::TextEditor::new(
+    let boexed: Box<dyn eframe::App> = Box::new(rust_text_editor::TextEditor::new(
         cc,
         stter_receiver,
         recorder_sender,
