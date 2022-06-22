@@ -52,33 +52,10 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
     );
     let config = config.with_sample_rate(sr);
 
-    let err_fn = move |err| eprintln!("Error on stream: {}", err);
-
-    // shared data for the asynchronous callback fn
+    // Shared data for the asynchronous callback fn.
     let should_send = Arc::new(Mutex::new(false));
-    let should_send2 = should_send.clone();
 
-    // This are "mpsc" channels -- multiproducer, signgle consumer
-    let stter_sender2 = stter_sender.clone();
-
-    let record_callback = move |data: &[i16], _: &_| {
-        if *should_send.lock().expect("Poisoned should_send mutex!") {
-            let data = data.to_vec();
-            stter_sender
-                .send(AudioMessage::Audio(data))
-                .expect("Failed to send audio data to stter!");
-        }
-    };
-
-    let stt_sender = stter_sender2;
-    let should_send = should_send2;
-
-    let stream = dev
-        .build_input_stream(&config.into(), record_callback, err_fn)
-        .expect("Failed to construct an input stream!");
-
-    // todo: perhaps pause error shouldn't be fatal, check on other machines
-    stream.pause().expect("faield to pause upon creation?");
+    let mut stream;
 
     loop {
         match gui_receiver
@@ -86,28 +63,44 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
             .expect("Failed to receive messages from gui!")
         {
             GuiOrders::Record => {
-                // sleep for a short while to make sure it starts smoothly
-                std::thread::sleep(Duration::from_millis(75));
+                let should_send2 = should_send.clone();
+                let stter_sender2 = stter_sender.clone();
+
+                let record_callback = move |data: &[i16], _: &_| {
+                    if *should_send2.lock().expect("Poisoned should_send mutex!") {
+                        let data = data.to_vec();
+                        stter_sender2
+                            .send(AudioMessage::Audio(data))
+                            .expect("Failed to send audio data to stter!");
+                    }
+                };
+
+                let err_fn = move |err| eprintln!("Error on stream: {}", err);
+
+                let config = config.clone();
+                stream = dev
+                    .build_input_stream(&config.into(), record_callback, err_fn)
+                    .expect("Failed to construct an input stream!");
+
                 {
                     *should_send.lock().expect("Poisoned should_send mutex!") = true;
                 }
                 stream.play().expect("Failed to start recording!");
             }
             GuiOrders::Stop => {
-                stream.pause().expect("Failed to stop recording!");
                 {
                     *should_send.lock().expect("Poisoned should_send mutex!") = false;
                 }
-                // also sleep here so that the record_callback stops smoothly
+                // sleep here so that the record_callback stops smoothly
                 std::thread::sleep(Duration::from_millis(50));
-                stt_sender
+                stter_sender
                     .send(AudioMessage::EndOf)
                     .expect("Failed to send EndOf to the stter!");
                 eprintln!("[recorder] Sent EndOf to the stter.");
             }
             GuiOrders::Exit => {
                 eprintln!("[recorder] Told to exit, doing so and notifying the stter.");
-                stt_sender
+                stter_sender
                     .send(AudioMessage::Exit)
                     .expect("Failed to send Exit to the stter!");
                 return;
