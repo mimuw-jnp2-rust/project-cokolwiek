@@ -18,7 +18,7 @@ fn main() {
         recorder::recorder(gui_receiver, stter_sender);
     });
 
-    // todo: make this closure work
+    // cannot make this closure work
     // https://github.com/rust-lang/rust/issues/97362
     // ^ this shoyld fix that in fututre i guess??
     // let editor = move |cc| {

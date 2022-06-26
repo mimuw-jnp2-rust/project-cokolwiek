@@ -18,9 +18,10 @@ pub enum GuiOrders {
     Exit,
 }
 
+const STT_SAMPLE_RATE: u32 = 16000;
+
 pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMessage>) {
     let host = cpal::default_host();
-    // todo: test this with a microphone from headphones
     let dev = host.default_input_device().expect("No input device!");
     let config = dev
         .supported_input_configs()
@@ -35,17 +36,19 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
     );
 
     eprintln!("[recorder] there are {} channel(s)", config.channels());
-    // todo: make this work for stereo? do i really need to though?
+    // should i make this work for stereo? do i really need to though?
+    // computer microphone usually is stereo but this should be tested more
+    // thoroughly probably
     // stereo_to_mono function avalaible here:
     // https://github.com/tazz4843/coqui-stt/blob/master/examples/threads.rs
     // at the bottom
     assert!(config.channels() == 1);
-    assert!(config.min_sample_rate().0 <= 16000 && 16000 <= config.max_sample_rate().0);
+    assert!(
+        config.min_sample_rate().0 <= STT_SAMPLE_RATE
+            && STT_SAMPLE_RATE <= config.max_sample_rate().0
+    );
 
-    // todo: perhaps this should be rather set according to what the model says?
-    // though obv the coqui models all run on 16 kHz so maybe hardcode it
-    // => or make a const u32 for that? (good idea)
-    let sr = cpal::SampleRate(16000);
+    let sr = cpal::SampleRate(STT_SAMPLE_RATE);
     eprintln!(
         "[recorder] Creating a stream with sample rate = {} Hz.",
         sr.0

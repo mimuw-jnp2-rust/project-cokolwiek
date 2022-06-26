@@ -14,6 +14,7 @@ pub enum DecodedSpeech {
 }
 
 const DEFAULT_MODEL_DIR: &str = "en-model";
+const INTERMEDIATE_DECODE_FREQ: u32 = 100;
 
 pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<DecodedSpeech>) {
     let (model_name, scorer_name) = get_model_scorer_names();
@@ -31,9 +32,6 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
 
     loop {
         eprintln!("[stter] creating new stream...");
-        // todo: i only create new stream each time, should i create new model?
-        // there is some weird behaviour, all im sayin'
-        // todo model.tostream?
         let mut stream =
             Stream::from_model(Arc::clone(&model)).expect("Model creation failed miserably");
 
@@ -57,8 +55,7 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
                     stream.feed_audio(&audio[..]);
 
                     // Send only intermediate results just so often.
-                    // todo: why 100?
-                    if counter % 100 != 0 {
+                    if counter % INTERMEDIATE_DECODE_FREQ != 0 {
                         continue;
                     }
 
@@ -95,8 +92,6 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
     }
 }
 
-// todo: surely this can be done in smarter way without copying strings
-// shouldn't the argv strings have 'static lifetimes anyway as our default?
 fn get_model_dir() -> String {
     let args: Vec<_> = std::env::args().skip(1).collect();
     match args.get(0) {
@@ -105,7 +100,7 @@ fn get_model_dir() -> String {
     }
 }
 
-// todo do those need to be boxes? copied without thinkin rly
+// this comes from coqui-stt/examples
 fn get_model_scorer_names() -> (Box<Path>, Option<Box<Path>>) {
     let model_dir = get_model_dir();
     println!("Looking for a model in the {} directory", model_dir);

@@ -110,7 +110,6 @@ impl eframe::App for TextEditor {
             if self.is_exiting {
                 self.should_exit = self.quit();
                 if self.should_exit {
-                    // todo: should the stter send any confirmation to wait for?
                     self.recorder_sender
                         .send(GuiOrders::Exit)
                         .expect("Failed to send Exit to recorder!");
@@ -185,6 +184,7 @@ impl TextEditor {
             Ok(_) => self.file_path = Some(path),
             Err(err) => return Err(err),
         }
+        self.has_changed = false;
         Ok(())
     }
 
@@ -217,7 +217,6 @@ impl TextEditor {
     // true if editor can exit (save not requested or succeed)
     fn quit(&mut self) -> bool {
         // the editr asks for confirmation only if there are any unsaved changes
-        // todo: this if could be rewritten in some nicer way, could it not?
         if self.has_changed {
             let mess = MessageDialog::new()
                 .set_title("Quit")
@@ -252,7 +251,6 @@ impl TextEditor {
         });
 
         // Display the file name if we have an assigned file
-        // todo: make this bigger and next to the button redner button?
         if let Some(p) = &self.file_path {
             // in rust the path may be really f-ed up so it is all options
             if let Some(s) = p.file_name().map(|s| s.to_str()).flatten() {
@@ -326,7 +324,6 @@ impl TextEditor {
     // Both manage_recording and end_recording receive info from the stter in
     // a non-blocking fashion as we want the gui to still be refreshed often enough
     // and respond to our clicks etc.
-    // todo: recv with timeout would be better than try_recv? less consuming
     fn manage_recording(&mut self) {
         let speech = self.stter_receiver.try_recv();
         if let Err(err) = speech {
@@ -349,7 +346,6 @@ impl TextEditor {
         };
     }
 
-    // todo: we do not need both of those functions currently, common code
     fn end_recording(&mut self) {
         let speech = self.stter_receiver.try_recv();
         if let Err(err) = speech {
@@ -370,7 +366,7 @@ impl TextEditor {
                 self.code = self.backup_code.clone();
                 self.backup_code = String::new();
                 self.code.push_str(&s);
-                // only now the recording is done and processed
+                // only now the recording is done and fully processed
                 self.is_recording = false;
                 self.is_stopping = false;
             }
