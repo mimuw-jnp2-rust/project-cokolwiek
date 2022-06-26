@@ -1,4 +1,14 @@
 
+### todo, or rather sbd _(should've been done)_ but we suffered from _time deprivation_
+list of things that could've been done and known issues
+- parsing of markdown wasn't improved at all
+- stt always inserts spoken text at the back instead of at where the cursor's at,
+  only noticed that just a few days ago. Could be done similarily to how shortcuts
+  use the cursor's position but would need moving recording habdling inside TextEdit's
+  ui.
+- no unit tests :/
+- some functions could be refactored
+
 # STT
 
 #### modele
@@ -31,7 +41,9 @@ default to jest `en-model`, można sobie przeróżne instalować ze [strony z mo
 
 ### pakiety potrzebne
 być może potrzeba doinstalować `libsound2-dev` jakimś `apt`em, ale to różnie bywa, 
-niektórzy musieli niektórzy nie
+niektórzy musieli niektórzy nie.
+
+Generalnie linux i dźwięk to smrodliwa sprawa, ale u mnie działa, że tak powiem.
 
 # Pierwsza iteracja
 

@@ -107,6 +107,8 @@ impl eframe::App for TextEditor {
                 frame.quit();
             }
 
+            // This is here to prevent the default response to clicking the X button
+            // and check if we can safely exit.
             if self.is_exiting {
                 self.should_exit = self.quit();
                 if self.should_exit {
@@ -216,6 +218,10 @@ impl TextEditor {
 
     // true if editor can exit (save not requested or succeed)
     fn quit(&mut self) -> bool {
+        // Cannot quit while recording.
+        if self.is_recording || self.is_stopping {
+            return false;
+        }
         // the editr asks for confirmation only if there are any unsaved changes
         if self.has_changed {
             let mess = MessageDialog::new()
