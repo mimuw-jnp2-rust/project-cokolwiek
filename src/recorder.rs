@@ -1,7 +1,7 @@
 // The thread responsible for recording user audio and sending it to stt.
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-
+use log::{trace, info, error};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -29,13 +29,13 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
         .find(|c| c.sample_format() == cpal::SampleFormat::I16)
         .expect("Failed to find required input device config ie i16.");
 
-    eprintln!(
-        "[recorder] Avalaible sample rate is between {} and {} Hz.",
+    info!(
+        "Avalaible sample rate is between {} and {} Hz.",
         config.min_sample_rate().0,
         config.max_sample_rate().0
     );
 
-    eprintln!("[recorder] there are {} channel(s)", config.channels());
+    info!("there are {} channel(s)", config.channels());
     // should i make this work for stereo? do i really need to though?
     // computer microphone usually is stereo but this should be tested more
     // thoroughly probably
@@ -49,13 +49,8 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
     );
 
     let sr = cpal::SampleRate(STT_SAMPLE_RATE);
-    eprintln!(
-        "[recorder] Creating a stream with sample rate = {} Hz.",
-        sr.0
-    );
     let config = config.with_sample_rate(sr);
 
-    // Shared data for the asynchronous callback fn.
     let should_send = Arc::new(Mutex::new(false));
 
     let mut stream;
@@ -66,6 +61,8 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
             .expect("Failed to receive messages from gui!")
         {
             GuiOrders::Record => {
+                trace!("Starting the recording, creating new stream.");
+                // Shared data for the asynchronous callback fn.
                 let should_send2 = should_send.clone();
                 let stter_sender2 = stter_sender.clone();
 
@@ -78,7 +75,7 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
                     }
                 };
 
-                let err_fn = move |err| eprintln!("Error on stream: {}", err);
+                let err_fn = |err| error!("Error on stream: {}", err);
 
                 let config = config.clone();
                 stream = dev
@@ -91,6 +88,7 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
                 stream.play().expect("Failed to start recording!");
             }
             GuiOrders::Stop => {
+                trace!("Being told to stop.");
                 {
                     *should_send.lock().expect("Poisoned should_send mutex!") = false;
                 }
@@ -99,10 +97,10 @@ pub fn recorder(gui_receiver: Receiver<GuiOrders>, stter_sender: Sender<AudioMes
                 stter_sender
                     .send(AudioMessage::EndOf)
                     .expect("Failed to send EndOf to the stter!");
-                eprintln!("[recorder] Sent EndOf to the stter.");
+                trace!("Sent EndOf to the stter.");
             }
             GuiOrders::Exit => {
-                eprintln!("[recorder] Told to exit, doing so and notifying the stter.");
+                trace!("Told to exit, doing so and notifying the stter.");
                 stter_sender
                     .send(AudioMessage::Exit)
                     .expect("Failed to send Exit to the stter!");

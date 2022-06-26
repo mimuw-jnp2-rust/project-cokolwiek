@@ -6,6 +6,8 @@ use rust_text_editor::recorder;
 use rust_text_editor::stter;
 
 fn main() {
+    env_logger::init();
+
     let (gui_sender, stter_receiver) = channel::<stter::DecodedSpeech>();
     let (stter_sender, recorder_receiver) = channel::<recorder::AudioMessage>();
     let (recorder_sender, gui_receiver) = channel::<recorder::GuiOrders>();

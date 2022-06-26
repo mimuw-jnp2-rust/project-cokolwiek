@@ -1,6 +1,7 @@
 // Here we have the thread responsible for converting speech to text.
 
 use coqui_stt::{Model, Stream};
+use log::{trace, info};
 use std::path::Path;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
@@ -22,16 +23,16 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
     // Enable external scorer if found in the model folder.
     if let Some(scorer) = scorer_name {
         let scorer = scorer.to_str().expect("invalid utf-8 found in path");
-        println!("Using external scorer `{}`", scorer);
+        info!("Using external scorer `{}`", scorer);
         m.enable_external_scorer(scorer).unwrap();
     }
 
     let model = Arc::new(m);
     let sr = model.get_sample_rate() as u32;
-    eprintln!("Model's expected sample rate is {}", sr);
+    info!("Model's expected sample rate is {}, 16000 Hz innit", sr);
 
     loop {
-        eprintln!("[stter] creating new stream...");
+        info!("creating new stream...");
         let mut stream =
             Stream::from_model(Arc::clone(&model)).expect("Model creation failed miserably");
 
@@ -48,7 +49,7 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
             match maybe_audio {
                 AudioMessage::Audio(audio) => {
                     if counter == 0 {
-                        eprintln!("[stter] Received first bit of new recording");
+                        trace!("Received first bit of a new recording");
                     }
                     counter += 1;
                     // We got send some new audio to process.
@@ -61,9 +62,10 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
 
                     let intermediate = stream.intermediate_decode();
                     if let Ok(intermediate) = intermediate {
-                        eprintln!(
-                            "[stter] counter = {}, sending intermediate results: \"{}\"",
-                            counter, intermediate
+                        trace!(
+                            "counter = {}, sending intermediate results: \"{}\"",
+                            counter,
+                            intermediate
                         );
 
                         gui_sender
@@ -72,19 +74,19 @@ pub fn stter(recorder_receiver: Receiver<AudioMessage>, gui_sender: Sender<Decod
                     }
                 }
                 AudioMessage::EndOf => {
-                    eprintln!("[stter] Got told to end, finishing the stream then");
+                    trace!("Got told to end, finishing the stream then");
                     let final_s = stream.finish_stream();
                     if let Ok(final_s) = final_s {
                         gui_sender
                             .send(DecodedSpeech::Final(final_s))
                             .expect("Sending of decoded speech failed miserably");
                     } else {
-                        eprintln!("Failed to finish the stream: {}", final_s.unwrap_err());
+                        trace!("Failed to finish the stream: {}", final_s.unwrap_err());
                     }
                     break;
                 }
                 AudioMessage::Exit => {
-                    eprintln!("[stter] Exiting gracefully.");
+                    info!("Exiting gracefully.");
                     return;
                 }
             };

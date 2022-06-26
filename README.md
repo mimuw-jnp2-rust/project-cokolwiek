@@ -35,6 +35,9 @@ niektórzy musieli niektórzy nie.
 
 Generalnie linux i dźwięk to smrodliwa sprawa, ale u mnie działa, że tak powiem.
 
+## debug messages
+`RUST_LOG=trace`, można to pewnie lepiej zrbić?
+
 # Między częścią pierwszą a drugą
 Lista zmian (_changelog_ jak to się mówi w tym profesjolekcie) oraz rzeczy, które mogły być lepsze (_failed-to-change-log_).
 - **STT** działa całkiem fajnie! Nawet to polskie to nie jest totalna

@@ -1,5 +1,6 @@
 use eframe::egui;
 use eframe::egui::{text_edit::CCursorRange, *};
+use log::trace;
 use rfd::{FileDialog, MessageDialog};
 use std::fs::File;
 use std::io::prelude::*;
@@ -46,7 +47,7 @@ impl eframe::App for TextEditor {
         ctx.set_visuals(egui::Visuals::dark());
         egui::SidePanel::right("side_panel").show(ctx, |ui| {
             if ui.button(format!("{:^17}", "Quit")).clicked() {
-                eprintln!("Quitting via the 'Quit' button");
+                trace!("Quitting via the 'Quit' button");
                 frame.quit();
             }
 
@@ -64,7 +65,7 @@ impl eframe::App for TextEditor {
                     if !self.is_recording {
                         self.start_recording();
                     } else if !self.is_stopping {
-                        eprintln!("Asking the recorder to stop recording.");
+                        trace!("Asking the recorder to stop recording.");
                         self.recorder_sender
                             .send(GuiOrders::Stop)
                             .expect("Failed to send recording-stopping message!");
@@ -103,7 +104,7 @@ impl eframe::App for TextEditor {
             }
 
             if ui.input_mut().consume_key(egui::Modifiers::COMMAND, Key::Q) {
-                eprintln!("Quitting via ctrl-q");
+                trace!("Quitting via ctrl-q");
                 frame.quit();
             }
 
@@ -123,7 +124,7 @@ impl eframe::App for TextEditor {
                     }
 
                     // Here we actually quit for real hence all of the above.
-                    eprintln!("[gui] End of times.");
+                    trace!("End of times.");
                     frame.quit();
                 } else {
                     self.is_exiting = false;
@@ -174,7 +175,7 @@ impl TextEditor {
             .pick_file()
             .unwrap_or_default();
 
-        eprintln!("path: {}", path.display());
+        trace!("path: {}", path.display());
 
         let mut file = match File::open(&path) {
             Ok(file) => file,
@@ -200,7 +201,7 @@ impl TextEditor {
                 .unwrap_or_default(),
         };
 
-        eprintln!("path: {}", path.display());
+        trace!("path: {}", path.display());
 
         let mut file = match File::create(&path) {
             Ok(file) => file,
