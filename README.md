@@ -1,4 +1,38 @@
 
+# STT
+
+#### modele
+jeśli chcemy na razie używać jedynie _engelsk_ modelu to droga prosta:
+
+```sh
+cd en-model
+./setup.sh
+```
+to zajmie chwilkę poniewaz to sążny model jest (zwłaszcza tzw scorer)
+
+dla polskiego analogicznie w `pl-model` jeśli wola
+
+#### libstt
+ważne jest również zainstalowanie samej biblioteczki
+
+```sh
+cd libstt
+./setup.sh
+```
+
+#### stt à la polaco
+
+```
+cargo run -- pl-model
+```
+po uprzednim ściągnięciu `pl-model` (ogólnie pierwszy z `argv` podany to `model-dir`,
+default to jest `en-model`, można sobie przeróżne instalować ze [strony z modelami](https://coqui.ai/models))
+
+
+### pakiety potrzebne
+być może potrzeba doinstalować `libsound2-dev` jakimś `apt`em, ale to różnie bywa, 
+niektórzy musieli niektórzy nie
+
 # Pierwsza iteracja
 
 ## edytor tekstowy w ruście

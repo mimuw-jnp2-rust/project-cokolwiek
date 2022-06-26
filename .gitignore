@@ -1,0 +1,16 @@
+/target
+*~
+
+# stt stuff
+
+# models
+en-model/*.scorer
+en-model/*.tflite
+en-model/alphabet.txt
+pl-model/*.scorer
+pl-model/*.tflite
+pl-model/alphabet.txt
+
+# library
+libstt/*.zip
+libstt/*.so*

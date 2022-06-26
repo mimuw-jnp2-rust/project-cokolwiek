@@ -1,16 +1,33 @@
+use eframe::egui;
 use eframe::egui::{text_edit::CCursorRange, *};
-use eframe::{egui, epi};
 use rfd::{FileDialog, MessageDialog};
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
+use std::sync::mpsc::{Receiver, Sender};
+use std::thread::JoinHandle;
+
+use crate::recorder::GuiOrders;
+use crate::stter::DecodedSpeech;
 
 pub struct TextEditor {
     code: String,
     show_rendered: bool,
     file_path: Option<PathBuf>,
+    has_changed: bool,
+    // Quit only when sure we want to quit.
     should_exit: bool,
     is_exiting: bool,
+    // Channels for passing messages regarding voice-writing.
+    stter_receiver: Receiver<DecodedSpeech>,
+    recorder_sender: Sender<GuiOrders>,
+    // Coordinating waiting for decoded speech.
+    is_recording: bool,
+    is_stopping: bool,
+    // Keep that when receiving intermediate results.
+    backup_code: String,
+    // Join handles for all threads communicating with the editor.
+    jhandles: Vec<JoinHandle<()>>,
 }
 
 impl PartialEq for TextEditor {
@@ -19,34 +36,41 @@ impl PartialEq for TextEditor {
     }
 }
 
-impl Default for TextEditor {
-    fn default() -> Self {
-        Self {
-            code: String::new(),
-            show_rendered: true,
-            file_path: None,
-            should_exit: false,
-            is_exiting: false,
-        }
-    }
-}
-
-impl epi::App for TextEditor {
+impl eframe::App for TextEditor {
     fn on_exit_event(&mut self) -> bool {
         self.is_exiting = true;
         self.should_exit
     }
 
-    fn name(&self) -> &str {
-        "Rust text editor"
-    }
-
-    fn update(&mut self, ctx: &eframe::egui::Context, frame: &epi::Frame) {
+    fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {
         ctx.set_visuals(egui::Visuals::dark());
         egui::SidePanel::right("side_panel").show(ctx, |ui| {
             if ui.button(format!("{:^17}", "Quit")).clicked() {
                 eprintln!("Quitting via the 'Quit' button");
                 frame.quit();
+            }
+
+            // This part of ui handles stt-ing.
+            if self.is_recording && self.is_stopping {
+                ui.spinner();
+            } else {
+                let dictate_bttn = if !self.is_recording && !self.is_stopping {
+                    "Dictate"
+                } else {
+                    "Stop"
+                };
+
+                if ui.button(format!("{:^16}", dictate_bttn)).clicked() {
+                    if !self.is_recording {
+                        self.start_recording();
+                    } else if !self.is_stopping {
+                        eprintln!("Asking the recorder to stop recording.");
+                        self.recorder_sender
+                            .send(GuiOrders::Stop)
+                            .expect("Failed to send recording-stopping message!");
+                        self.is_stopping = true;
+                    }
+                }
             }
 
             if ui.button(format!("{:^13}", "Open file")).clicked() && matches!(self.open(), Err(_))
@@ -86,6 +110,18 @@ impl epi::App for TextEditor {
             if self.is_exiting {
                 self.should_exit = self.quit();
                 if self.should_exit {
+                    self.recorder_sender
+                        .send(GuiOrders::Exit)
+                        .expect("Failed to send Exit to recorder!");
+
+                    let mut jhandles = vec![];
+                    std::mem::swap(&mut jhandles, &mut self.jhandles);
+                    for jh in jhandles {
+                        jh.join().expect("Failure upon joining a thread!");
+                    }
+
+                    // Here we actually quit for real hence all of the above.
+                    eprintln!("[gui] End of times.");
                     frame.quit();
                 } else {
                     self.is_exiting = false;
@@ -96,10 +132,40 @@ impl epi::App for TextEditor {
         eframe::egui::CentralPanel::default().show(ctx, |ui| {
             self.ui(ui);
         });
+
+        if self.is_stopping {
+            self.end_recording();
+        } else if self.is_recording {
+            self.manage_recording();
+            // need to check for incoming results quite often hence the request
+            ctx.request_repaint();
+        }
     }
 }
 
 impl TextEditor {
+    pub fn new(
+        _cc: &eframe::CreationContext<'_>,
+        stter_receiver: Receiver<DecodedSpeech>,
+        recorder_sender: Sender<GuiOrders>,
+        jhandles: Vec<JoinHandle<()>>,
+    ) -> Self {
+        Self {
+            code: String::new(),
+            show_rendered: true,
+            file_path: None,
+            has_changed: true,
+            should_exit: false,
+            is_exiting: false,
+            stter_receiver,
+            recorder_sender,
+            is_recording: false,
+            is_stopping: false,
+            backup_code: String::new(),
+            jhandles,
+        }
+    }
+
     fn open(&mut self) -> Result<(), std::io::Error> {
         let path = FileDialog::new()
             .set_directory("~/")
@@ -118,6 +184,7 @@ impl TextEditor {
             Ok(_) => self.file_path = Some(path),
             Err(err) => return Err(err),
         }
+        self.has_changed = false;
         Ok(())
     }
 
@@ -143,28 +210,34 @@ impl TextEditor {
             Err(err) => return Err(err),
         }
 
+        self.has_changed = false;
         Ok(())
     }
 
     // true if editor can exit (save not requested or succeed)
     fn quit(&mut self) -> bool {
-        let mess = MessageDialog::new()
-            .set_title("Quit")
-            .set_description("Do you want to save before quitting?")
-            .set_buttons(rfd::MessageButtons::YesNo)
-            .show();
+        // the editr asks for confirmation only if there are any unsaved changes
+        if self.has_changed {
+            let mess = MessageDialog::new()
+                .set_title("Quit")
+                .set_description("Do you want to save your changes??")
+                .set_buttons(rfd::MessageButtons::YesNo)
+                .show();
 
-        if mess {
-            match self.save(false) {
-                Ok(()) => true,
-                Err(_) => {
-                    MessageDialog::new()
-                        .set_title("Quitting")
-                        .set_description("Failed to save the file")
-                        .set_buttons(rfd::MessageButtons::Ok)
-                        .show();
-                    false
+            if mess {
+                match self.save(false) {
+                    Ok(()) => true,
+                    Err(_) => {
+                        MessageDialog::new()
+                            .set_title("Quitting")
+                            .set_description("Failed to save the file")
+                            .set_buttons(rfd::MessageButtons::Ok)
+                            .show();
+                        false
+                    }
                 }
+            } else {
+                true
             }
         } else {
             true
@@ -175,9 +248,19 @@ impl TextEditor {
         egui::Grid::new("controls").show(ui, |ui| {
             ui.checkbox(&mut self.show_rendered, "Show rendered");
             ui.end_row();
-            egui::reset_button(ui, self);
-            ui.end_row();
         });
+
+        // Display the file name if we have an assigned file
+        if let Some(p) = &self.file_path {
+            // in rust the path may be really f-ed up so it is all options
+            if let Some(s) = p.file_name().map(|s| s.to_str()).flatten() {
+                if self.has_changed {
+                    ui.label(format!("{}*", s));
+                } else {
+                    ui.label(format!("{}", s));
+                }
+            }
+        }
 
         ui.separator();
 
@@ -209,9 +292,15 @@ impl TextEditor {
                     .hint_text("Type here...")
                     .desired_width(f32::INFINITY)
                     .font(egui::FontId::monospace(15.)) // for cursor height
-                    .desired_rows(100),
+                    .desired_rows(100)
+                    .interactive(!self.is_recording), // not writable while recording
             )
         };
+
+        // Unsaved changes!
+        if response.changed() {
+            self.has_changed = true;
+        }
 
         if let Some(mut state) = TextEdit::load_state(ui.ctx(), response.id) {
             if let Some(mut ccursor_range) = state.ccursor_range() {
@@ -222,6 +311,66 @@ impl TextEditor {
                 }
             }
         }
+    }
+
+    fn start_recording(&mut self) {
+        self.is_recording = true;
+        self.recorder_sender
+            .send(GuiOrders::Record)
+            .expect("Failed to send a recording-starting message!");
+        self.backup_code = self.code.clone();
+    }
+
+    // Both manage_recording and end_recording receive info from the stter in
+    // a non-blocking fashion as we want the gui to still be refreshed often enough
+    // and respond to our clicks etc.
+    fn manage_recording(&mut self) {
+        let speech = self.stter_receiver.try_recv();
+        if let Err(err) = speech {
+            match err {
+                std::sync::mpsc::TryRecvError::Empty => return,
+                std::sync::mpsc::TryRecvError::Disconnected => panic!("Failed to receive!"),
+            };
+        }
+        let speech = speech.unwrap();
+
+        match speech {
+            DecodedSpeech::Intermediate(s) => {
+                self.code = self.backup_code.clone();
+                self.code.push_str(&s);
+                self.code.push_str("...");
+            }
+            DecodedSpeech::Final(_) => panic!(
+                "Editor logic error! We should only receive intermediate decoded text fragments now!"
+            ),
+        };
+    }
+
+    fn end_recording(&mut self) {
+        let speech = self.stter_receiver.try_recv();
+        if let Err(err) = speech {
+            match err {
+                std::sync::mpsc::TryRecvError::Empty => return,
+                std::sync::mpsc::TryRecvError::Disconnected => panic!("Failed to receive!"),
+            };
+        }
+        let speech = speech.unwrap();
+
+        match speech {
+            DecodedSpeech::Intermediate(s) => {
+                self.code = self.backup_code.clone();
+                self.code.push_str(&s);
+                self.code.push_str("...");
+            }
+            DecodedSpeech::Final(s) => {
+                self.code = self.backup_code.clone();
+                self.backup_code = String::new();
+                self.code.push_str(&s);
+                // only now the recording is done and fully processed
+                self.is_recording = false;
+                self.is_stopping = false;
+            }
+        };
     }
 }
 

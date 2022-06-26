@@ -12,10 +12,13 @@ name = "rust-text-editor_bin"
 path = "src/main.rs"
 
 [dependencies]
-eframe = "0.17.0" # Gives us egui, epi and web+native backends
+eframe = "0.18.0"
 
 # dialog windows for file selection are super nice
 rfd = "0.8.2"
+
+coqui-stt = "0.3.2"
+cpal = "0.13.5"
 
 [features]
 default = []
