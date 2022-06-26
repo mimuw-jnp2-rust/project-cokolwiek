@@ -1,14 +1,4 @@
 
-### todo, or rather sbd _(should've been done)_ but we suffered from _time deprivation_
-list of things that could've been done and known issues
-- parsing of markdown wasn't improved at all
-- stt always inserts spoken text at the back instead of at where the cursor's at,
-  only noticed that just a few days ago. Could be done similarily to how shortcuts
-  use the cursor's position but would need moving recording habdling inside TextEdit's
-  ui.
-- no unit tests :/
-- some functions could be refactored
-
 # STT
 
 #### modele
@@ -44,6 +34,33 @@ być może potrzeba doinstalować `libsound2-dev` jakimś `apt`em, ale to różn
 niektórzy musieli niektórzy nie.
 
 Generalnie linux i dźwięk to smrodliwa sprawa, ale u mnie działa, że tak powiem.
+
+# Między częścią pierwszą a drugą
+Lista zmian (_changelog_ jak to się mówi w tym profesjolekcie) oraz rzeczy, które mogły być lepsze (_failed-to-change-log_).
+- **STT** działa całkiem fajnie! Nawet to polskie to nie jest totalna
+  gruzeria i polecam poliglotom tego świata pościągać modele dla
+  innych języków i sb je zobaczyć, całkiem fajne
+- **STT** nie zawsze działa... -- modele są niedoskonałe i _biased_ do
+  głosów męskich, w szczególności model dla j. angielskiego działa
+  lepiej na męskich głosach z a*merykańskim akcentem. Trochę szkoda
+- **STT** nie odpala się?? -- taki problem mże być skutkiem jakichś
+  linuksowych obrzydlistw, udokumentowano działanie na dwu róznych
+  komputerach z linuksem o dwu różnych dystrybucjach tegoż systemu,
+  ale nadal bywają jakieś problemy, które użytkownik zechce naprawić
+  samemu.
+
+  Jeśli sytuacja jest naprawdę tragiczna, to zapraszam do kontaktu
+  (choćby mail do gc429174), można też zademonstrować działanie
+  oczekiwane i porównać.
+  
+- nie udało nam się poprawić code smellów i brzydkich punktów z cz1,
+  niestety padliśmy ofiarami tragicznej deprywacji czasowej, a szkoda,
+  gdyż pole do poprawek istotnie jest
+- parsing markdownu jest wysoce niedoskonały. Istnieje nawet na to
+  skuteczne remedium, ale pozostaje `unimplemented!()` jak to mawiają
+  fanboye rusta. Informacje zawarte są u góry pliku parsującego.
+- oprogramowanie nie jest jakoś niesamowicie przetestowane
+- estetyka jest dyskusyjna, ale cóż
 
 # Pierwsza iteracja
 
