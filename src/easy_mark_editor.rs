@@ -260,11 +260,11 @@ impl TextEditor {
         // Display the file name if we have an assigned file
         if let Some(p) = &self.file_path {
             // in rust the path may be really f-ed up so it is all options
-            if let Some(s) = p.file_name().map(|s| s.to_str()).flatten() {
+            if let Some(s) = p.file_name().and_then(|s| s.to_str()) {
                 if self.has_changed {
                     ui.label(format!("{}*", s));
                 } else {
-                    ui.label(format!("{}", s));
+                    ui.label(s.to_string());
                 }
             }
         }

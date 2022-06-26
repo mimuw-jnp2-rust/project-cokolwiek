@@ -1,7 +1,7 @@
 // The thread responsible for recording user audio and sending it to stt.
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use log::{trace, info, error};
+use log::{error, info, trace};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;

@@ -1,7 +1,7 @@
 // Here we have the thread responsible for converting speech to text.
 
 use coqui_stt::{Model, Stream};
-use log::{trace, info};
+use log::{info, trace};
 use std::path::Path;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
