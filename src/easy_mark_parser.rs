@@ -1,3 +1,14 @@
+// In a perfect world, the world of forms, this whole file would've been
+// deleted and instead we would have a cool functional parser based on the nom
+// https://docs.rs/nom/latest/nom/
+// crate. We could base this on
+// https://github.com/hgm-king/prose/blob/master/src/lib.rs
+// the AST is layed out nicely there.
+//
+// This would be very cool to have it written that way but this is not the world
+// of forms and we were out of time.
+// Hence it is what it is, untouched since the first part :/
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Item<'a> {
     /// `\n`
