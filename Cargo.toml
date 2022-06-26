@@ -1,0 +1,30 @@
+[package]
+name = "rust-text-editor"
+version = "0.1.0"
+default-run = "rust-text-editor_bin"
+authors = ["Tomek", "Maja", "Grzegorz", "Agnieszka"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "rust-text-editor_bin"
+path = "src/main.rs"
+
+[dependencies]
+eframe = "0.18.0"
+
+# dialog windows for file selection are super nice
+rfd = "0.8.2"
+
+coqui-stt = "0.3.2"
+cpal = "0.13.5"
+
+log = "0.4.17"
+env_logger = "0.9.0"
+
+[features]
+default = []
+
+[profile.release]
+opt-level = 2 # fast and small
